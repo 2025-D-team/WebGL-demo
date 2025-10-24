@@ -1,0 +1,80 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "map_demo.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "exportAsImage.drawTileGrid": true,
+    "fileStates": {
+        ":/automap-tiles.tsx": {
+            "scaleInDock": 0.73
+        },
+        "[Base]BaseChip_pipo.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.73,
+            "scaleInEditor": 4.87
+        },
+        "map_02.tsx": {
+            "scaleInDock": 0.73,
+            "scaleInEditor": 1
+        },
+        "map_demo.tmx": {
+            "scale": 0.773,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 492.23803363518755,
+                "y": 657.1798188874513
+            }
+        },
+        "map_object-tip.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 4.87
+        },
+        "part.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 4.87
+        },
+        "root.tsx": {
+            "scaleInDock": 0.73,
+            "scaleInEditor": 4.87
+        },
+        "texture.tsx": {
+            "scaleInDock": 0.73,
+            "scaleInEditor": 1.7972
+        }
+    },
+    "last.exportedFilePath": "/Users/s2240025/Desktop/team_d/d_team",
+    "last.imagePath": "/Users/s2240025/Desktop/map_test/MapChip",
+    "map.height": 96,
+    "map.lastUsedExportFilter": "JSON map files (*.tmj *.json)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 32,
+    "map.tileWidth": 32,
+    "map.width": 96,
+    "openFiles": [
+        "[Base]BaseChip_pipo.tsx",
+        "map_demo.tmx",
+        "texture.tsx",
+        "part.tsx"
+    ],
+    "project": "test.tiled-project",
+    "recentFiles": [
+        "root.tsx",
+        "[Base]BaseChip_pipo.tsx",
+        "texture.tsx",
+        "map_object-tip.tsx",
+        "part.tsx",
+        "map_demo.tmx",
+        "map_02.tsx"
+    ],
+    "tileset.lastUsedFormat": "json",
+    "tileset.margin": 0,
+    "tileset.spacing": 0,
+    "tileset.tileSize": {
+        "height": 32,
+        "width": 32
+    }
+}

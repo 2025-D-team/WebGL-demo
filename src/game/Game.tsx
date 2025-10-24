@@ -2,15 +2,20 @@ import { useEffect, useRef } from 'react'
 
 import * as PIXI from 'pixi.js'
 
+import { Character } from './Character'
+import { InputHandler } from './InputHandler'
 import { TiledMapLoader } from './TiledMapLoader'
 
 export const Game = () => {
     const canvasRef = useRef<HTMLDivElement>(null)
     const appRef = useRef<PIXI.Application | null>(null)
+    const characterRef = useRef<Character | null>(null)
+    const inputHandlerRef = useRef<InputHandler | null>(null)
+    const mapContainerRef = useRef<PIXI.Container | null>(null)
 
     useEffect(() => {
         const initGame = async () => {
-            if (!canvasRef.current) return
+            if (!canvasRef.current || appRef.current) return
 
             // Create PixiJS application
             const app = new PIXI.Application()
@@ -18,9 +23,9 @@ export const Game = () => {
                 width: window.innerWidth,
                 height: window.innerHeight,
                 backgroundColor: 0x1a1a1a,
-                antialias: true,
-                resolution: window.devicePixelRatio || 1,
-                autoDensity: true,
+                antialias: false,
+                resolution: 1,
+                autoDensity: false,
             })
 
             appRef.current = app
@@ -30,65 +35,100 @@ export const Game = () => {
             try {
                 const mapLoader = new TiledMapLoader()
                 const mapContainer = await mapLoader.loadMap('/src/assets/maps/map_demo.tmj')
+                mapContainerRef.current = mapContainer
 
                 app.stage.addChild(mapContainer)
 
                 // Get map dimensions
                 const mapData = mapLoader.getMapData()
+                let mapWidth = 3072
+                let mapHeight = 3072
+
                 if (mapData) {
-                    const mapWidth = mapData.width * mapData.tilewidth
-                    const mapHeight = mapData.height * mapData.tileheight
+                    mapWidth = mapData.width * mapData.tilewidth
+                    mapHeight = mapData.height * mapData.tileheight
                     console.log(`Map size: ${mapWidth}x${mapHeight} pixels`)
                     console.log(`Grid: ${mapData.width}x${mapData.height} tiles`)
 
-                    // Scale to fit screen initially
-                    const scaleX = window.innerWidth / mapWidth
-                    const scaleY = window.innerHeight / mapHeight
-                    const scale = Math.min(scaleX, scaleY, 1) * 0.8
-
-                    mapContainer.scale.set(scale)
-
-                    // Center map
-                    mapContainer.x = (window.innerWidth - mapWidth * scale) / 2
-                    mapContainer.y = (window.innerHeight - mapHeight * scale) / 2
+                    // Set 1:1 scale (100% zoom, no scaling)
+                    mapContainer.scale.set(1)
                 }
 
-                // Add simple camera controls (drag to pan, wheel to zoom)
-                let isDragging = false
-                let dragStart = { x: 0, y: 0 }
+                // Initialize character at center of map
+                const character = new Character(mapWidth / 2, mapHeight / 2)
+                await character.init()
+                characterRef.current = character
 
-                app.canvas.addEventListener('mousedown', (e) => {
-                    isDragging = true
-                    dragStart = { x: e.clientX, y: e.clientY }
-                })
+                // Add character to mapContainer (so it moves with camera)
+                mapContainer.addChild(character.getContainer())
+                console.log('Character added to map at:', mapWidth / 2, mapHeight / 2)
 
-                app.canvas.addEventListener('mousemove', (e) => {
-                    if (!isDragging) return
+                // Initialize input handler
+                const inputHandler = new InputHandler()
+                inputHandlerRef.current = inputHandler
 
-                    const dx = e.clientX - dragStart.x
-                    const dy = e.clientY - dragStart.y
+                // Camera deadzone settings (35% width, 40% height)
+                const deadzoneWidth = window.innerWidth * 0.35
+                const deadzoneHeight = window.innerHeight * 0.4
 
-                    mapContainer.x += dx
-                    mapContainer.y += dy
+                // Map bounds with 32px padding
+                const padding = 32
+                const mapBounds = {
+                    minX: padding,
+                    maxX: mapWidth - padding,
+                    minY: padding,
+                    maxY: mapHeight - padding,
+                }
 
-                    dragStart = { x: e.clientX, y: e.clientY }
-                })
+                // Initial camera position - center on character
+                mapContainerRef.current.x = window.innerWidth / 2 - mapWidth / 2
+                mapContainerRef.current.y = window.innerHeight / 2 - mapHeight / 2
 
-                app.canvas.addEventListener('mouseup', () => {
-                    isDragging = false
-                })
+                // Game loop - update character and camera with deadzone
+                app.ticker.add(() => {
+                    if (!characterRef.current || !mapContainerRef.current) return
 
-                app.canvas.addEventListener('wheel', (e) => {
-                    e.preventDefault()
+                    // Get input direction
+                    const direction = inputHandler.getDirection()
 
-                    const zoomSpeed = 0.1
-                    const direction = e.deltaY > 0 ? -1 : 1
-                    const newScale = mapContainer.scale.x * (1 + direction * zoomSpeed)
+                    // Move character (with map bounds)
+                    characterRef.current.move(direction, mapBounds)
 
-                    // Clamp scale
-                    if (newScale >= 0.1 && newScale <= 2) {
-                        mapContainer.scale.set(newScale)
+                    // Camera follow with deadzone
+                    const charPos = characterRef.current.getPosition()
+                    const mapContainer = mapContainerRef.current
+
+                    // Calculate character position in screen space
+                    const charScreenX = charPos.x + mapContainer.x
+                    const charScreenY = charPos.y + mapContainer.y
+
+                    // Calculate deadzone boundaries (centered on screen)
+                    const deadzoneLeft = (window.innerWidth - deadzoneWidth) / 2
+                    const deadzoneRight = (window.innerWidth + deadzoneWidth) / 2
+                    const deadzoneTop = (window.innerHeight - deadzoneHeight) / 2
+                    const deadzoneBottom = (window.innerHeight + deadzoneHeight) / 2
+
+                    // Adjust camera if character exits deadzone
+                    if (charScreenX < deadzoneLeft) {
+                        mapContainer.x += deadzoneLeft - charScreenX
+                    } else if (charScreenX > deadzoneRight) {
+                        mapContainer.x -= charScreenX - deadzoneRight
                     }
+
+                    if (charScreenY < deadzoneTop) {
+                        mapContainer.y += deadzoneTop - charScreenY
+                    } else if (charScreenY > deadzoneBottom) {
+                        mapContainer.y -= charScreenY - deadzoneBottom
+                    }
+
+                    // Clamp camera to map bounds (prevent showing outside map)
+                    const minCameraX = window.innerWidth - mapWidth
+                    const maxCameraX = 0
+                    const minCameraY = window.innerHeight - mapHeight
+                    const maxCameraY = 0
+
+                    mapContainer.x = Math.max(minCameraX, Math.min(mapContainer.x, maxCameraX))
+                    mapContainer.y = Math.max(minCameraY, Math.min(mapContainer.y, maxCameraY))
                 })
             } catch (error) {
                 console.error('Failed to load game:', error)
@@ -99,8 +139,12 @@ export const Game = () => {
 
         // Cleanup
         return () => {
+            if (inputHandlerRef.current) {
+                inputHandlerRef.current.destroy()
+            }
             if (appRef.current) {
-                appRef.current.destroy(true)
+                appRef.current.destroy(true, { children: true })
+                appRef.current = null
             }
         }
     }, [])

@@ -1,0 +1,14 @@
+{ "columns":8,
+ "image":"..\/..\/map_test\/MapChip\/[Base]BaseChip_pipo.png",
+ "imageheight":7968,
+ "imagewidth":256,
+ "margin":0,
+ "name":"[Base]BaseChip_pipo",
+ "spacing":0,
+ "tilecount":1992,
+ "tiledversion":"1.11.2",
+ "tileheight":32,
+ "tilewidth":32,
+ "type":"tileset",
+ "version":"1.10"
+}

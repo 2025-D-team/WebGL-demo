@@ -1,0 +1,14 @@
+{ "columns":29,
+ "image":"..\/..\/root.png",
+ "imageheight":1000,
+ "imagewidth":1000,
+ "margin":8,
+ "name":"root",
+ "spacing":2,
+ "tilecount":841,
+ "tiledversion":"1.11.2",
+ "tileheight":32,
+ "tilewidth":32,
+ "type":"tileset",
+ "version":"1.10"
+}
