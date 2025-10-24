@@ -1,9 +1,7 @@
+import { Game } from './game/Game'
+
 function App() {
-  return (
-    <>
-      <h1>hello</h1>
-    </>
-  )
+    return <Game />
 }
 
 export default App

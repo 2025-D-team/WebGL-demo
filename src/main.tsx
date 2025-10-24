@@ -6,7 +6,7 @@ import App from './App.tsx'
 import './style/globalStyles.scss'
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
+    <StrictMode>
+        <App />
+    </StrictMode>
 )

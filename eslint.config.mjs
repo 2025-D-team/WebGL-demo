@@ -8,25 +8,25 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-      eslintConfigPrettier,
-    ],
-    plugins: {
-      prettier: eslintPluginPrettier,
+    globalIgnores(['dist', '**/assets/**']),
+    {
+        files: ['**/*.{ts,tsx}'],
+        extends: [
+            js.configs.recommended,
+            tseslint.configs.recommended,
+            reactHooks.configs['recommended-latest'],
+            reactRefresh.configs.vite,
+            eslintConfigPrettier,
+        ],
+        plugins: {
+            prettier: eslintPluginPrettier,
+        },
+        rules: {
+            'prettier/prettier': 'error',
+        },
+        languageOptions: {
+            ecmaVersion: 2020,
+            globals: globals.browser,
+        },
     },
-    rules: {
-      'prettier/prettier': 'error',
-    },
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
-    },
-  },
 ])
