@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react'
 
 import * as PIXI from 'pixi.js'
 
+import { GameConfig } from '../config/gameConfig'
 import { Character } from './Character'
+import { CollisionManager } from './CollisionManager'
 import { InputHandler } from './InputHandler'
 import { TiledMapLoader } from './TiledMapLoader'
 
@@ -22,10 +24,10 @@ export const Game = () => {
             await app.init({
                 width: window.innerWidth,
                 height: window.innerHeight,
-                backgroundColor: 0x1a1a1a,
-                antialias: false,
-                resolution: 1,
-                autoDensity: false,
+                backgroundColor: GameConfig.renderer.backgroundColor,
+                antialias: GameConfig.renderer.antialias,
+                resolution: GameConfig.renderer.resolution,
+                autoDensity: GameConfig.renderer.autoDensity,
             })
 
             appRef.current = app
@@ -63,16 +65,21 @@ export const Game = () => {
                 mapContainer.addChild(character.getContainer())
                 console.log('Character added to map at:', mapWidth / 2, mapHeight / 2)
 
+                // Load collision objects from map
+                const collisionManager = new CollisionManager()
+                const collisionObjects = mapLoader.getCollisionObjects()
+                collisionManager.loadFromTiledObjects(collisionObjects)
+
                 // Initialize input handler
                 const inputHandler = new InputHandler()
                 inputHandlerRef.current = inputHandler
 
-                // Camera deadzone settings (35% width, 40% height)
-                const deadzoneWidth = window.innerWidth * 0.35
-                const deadzoneHeight = window.innerHeight * 0.4
+                // Camera deadzone settings from config
+                const deadzoneWidth = window.innerWidth * GameConfig.camera.deadzoneWidthPercent
+                const deadzoneHeight = window.innerHeight * GameConfig.camera.deadzoneHeightPercent
 
-                // Map bounds with 32px padding
-                const padding = 32
+                // Map bounds with padding from config
+                const padding = GameConfig.map.padding
                 const mapBounds = {
                     minX: padding,
                     maxX: mapWidth - padding,
@@ -85,14 +92,20 @@ export const Game = () => {
                 mapContainerRef.current.y = window.innerHeight / 2 - mapHeight / 2
 
                 // Game loop - update character and camera with deadzone
-                app.ticker.add(() => {
+                app.ticker.add((ticker) => {
                     if (!characterRef.current || !mapContainerRef.current) return
+
+                    // Get delta time in seconds (framerate independent movement)
+                    const deltaTime = ticker.deltaMS / 1000
 
                     // Get input direction
                     const direction = inputHandler.getDirection()
 
-                    // Move character (with map bounds)
-                    characterRef.current.move(direction, mapBounds)
+                    // Move character (with map bounds and collision check)
+                    const charSize = characterRef.current.getSize()
+                    characterRef.current.move(direction, deltaTime, mapBounds, (newX, newY, oldX, oldY) =>
+                        collisionManager.getValidPosition(newX, newY, oldX, oldY, charSize.width, charSize.height)
+                    )
 
                     // Camera follow with deadzone
                     const charPos = characterRef.current.getPosition()

@@ -1,5 +1,7 @@
 import * as PIXI from 'pixi.js'
 
+import { GameConfig } from '../config/gameConfig'
+
 type Direction = 'down' | 'up' | 'left' | 'right'
 
 export class Character {
@@ -8,8 +10,10 @@ export class Character {
     private animations: Map<Direction, PIXI.AnimatedSprite> = new Map()
     private currentDirection: Direction = 'down'
     private isMoving: boolean = false
-    private speed: number = 6 // pixels per frame (1.5x faster)
+    private speed: number = GameConfig.character.speed
     public position: { x: number; y: number }
+    private width: number = GameConfig.character.size
+    private height: number = GameConfig.character.size
 
     constructor(x: number, y: number) {
         this.container = new PIXI.Container()
@@ -39,39 +43,53 @@ export class Character {
         }
 
         try {
-            // Tile size is 32x32, GIF frames are 480x480, so scale = 32/480 ≈ 0.067
-            const tileSize = 32
-            const frameSize = 480
+            // Get config values
+            const tileSize = GameConfig.map.tileSize
+            const frameSize = 480 // Original GIF frame size
             const scale = tileSize / frameSize
+            const animSpeed = GameConfig.character.animationSpeed
+
+            // Animation frame counts from config
+            const frameCount = {
+                down: GameConfig.animations.walkDown,
+                up: GameConfig.animations.walkUp,
+                right: GameConfig.animations.walkRight,
+            }
 
             // Load walk-down (4 frames)
-            const walkDownTextures = await loadFrames('/src/assets/char_demo/frames/walk-down', 4)
+            const walkDownTextures = await loadFrames(`${GameConfig.assets.characterFrames}/walk-down`, frameCount.down)
             const walkDownSprite = new PIXI.AnimatedSprite(walkDownTextures)
-            walkDownSprite.animationSpeed = 0.15
+            walkDownSprite.animationSpeed = animSpeed
             walkDownSprite.anchor.set(0.5, 0.5)
-            walkDownSprite.scale.set(scale) // Scale to 32px (1 tile)
+            walkDownSprite.scale.set(scale)
             this.animations.set('down', walkDownSprite)
 
             // Load walk-up (4 frames)
-            const walkUpTextures = await loadFrames('/src/assets/char_demo/frames/walk-up', 4)
+            const walkUpTextures = await loadFrames(`${GameConfig.assets.characterFrames}/walk-up`, frameCount.up)
             const walkUpSprite = new PIXI.AnimatedSprite(walkUpTextures)
-            walkUpSprite.animationSpeed = 0.15
+            walkUpSprite.animationSpeed = animSpeed
             walkUpSprite.anchor.set(0.5, 0.5)
             walkUpSprite.scale.set(scale)
             this.animations.set('up', walkUpSprite)
 
             // Load walk-right (4 frames)
-            const walkRightTextures = await loadFrames('/src/assets/char_demo/frames/walk-right', 4)
+            const walkRightTextures = await loadFrames(
+                `${GameConfig.assets.characterFrames}/walk-right`,
+                frameCount.right
+            )
             const walkRightSprite = new PIXI.AnimatedSprite(walkRightTextures)
-            walkRightSprite.animationSpeed = 0.15
+            walkRightSprite.animationSpeed = animSpeed
             walkRightSprite.anchor.set(0.5, 0.5)
             walkRightSprite.scale.set(scale)
             this.animations.set('right', walkRightSprite)
 
             // Walk-left is flipped walk-right
-            const walkLeftTextures = await loadFrames('/src/assets/char_demo/frames/walk-right', 4)
+            const walkLeftTextures = await loadFrames(
+                `${GameConfig.assets.characterFrames}/walk-right`,
+                frameCount.right
+            )
             const walkLeftSprite = new PIXI.AnimatedSprite(walkLeftTextures)
-            walkLeftSprite.animationSpeed = 0.15
+            walkLeftSprite.animationSpeed = animSpeed
             walkLeftSprite.anchor.set(0.5, 0.5)
             walkLeftSprite.scale.set(-scale, scale) // Flip horizontally
             this.animations.set('left', walkLeftSprite)
@@ -108,10 +126,18 @@ export class Character {
         }
     }
 
-    move(direction: Direction | null, mapBounds?: { minX: number; maxX: number; minY: number; maxY: number }) {
+    move(
+        direction: Direction | null,
+        deltaTime: number, // Time elapsed since last frame (in seconds)
+        mapBounds?: { minX: number; maxX: number; minY: number; maxY: number },
+        collisionCheck?: (newX: number, newY: number, oldX: number, oldY: number) => { x: number; y: number }
+    ) {
         if (direction) {
             this.setDirection(direction, true)
             this.isMoving = true
+
+            // Calculate movement distance based on delta time (framerate independent)
+            const moveDistance = this.speed * deltaTime
 
             // Calculate new position
             let newX = this.position.x
@@ -119,17 +145,24 @@ export class Character {
 
             switch (direction) {
                 case 'up':
-                    newY -= this.speed
+                    newY -= moveDistance
                     break
                 case 'down':
-                    newY += this.speed
+                    newY += moveDistance
                     break
                 case 'left':
-                    newX -= this.speed
+                    newX -= moveDistance
                     break
                 case 'right':
-                    newX += this.speed
+                    newX += moveDistance
                     break
+            }
+
+            // Check collision if callback provided
+            if (collisionCheck) {
+                const validPos = collisionCheck(newX, newY, this.position.x, this.position.y)
+                newX = validPos.x
+                newY = validPos.y
             }
 
             // Clamp position within map bounds (with padding)
@@ -161,5 +194,9 @@ export class Character {
 
     getPosition(): { x: number; y: number } {
         return this.position
+    }
+
+    getSize(): { width: number; height: number } {
+        return { width: this.width, height: this.height }
     }
 }

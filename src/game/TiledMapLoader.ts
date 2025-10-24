@@ -1,9 +1,10 @@
 import * as PIXI from 'pixi.js'
 
-import type { TiledMap } from '../types/tiled'
+import type { TiledMap, TiledObject } from '../types/tiled'
 
 export class TiledMapLoader {
     private mapData: TiledMap | null = null
+    private collisionObjects: TiledObject[] = []
     private container: PIXI.Container
 
     constructor() {
@@ -23,6 +24,9 @@ export class TiledMapLoader {
 
             // Render tile layers
             this.renderTileLayers()
+
+            // Load collision objects from Object Layers
+            this.loadCollisionObjects()
 
             return this.container
         } catch (error) {
@@ -133,11 +137,33 @@ export class TiledMapLoader {
         return new PIXI.Sprite(texture)
     }
 
+    private loadCollisionObjects() {
+        if (!this.mapData) return
+
+        // Find all Object Layers
+        for (const layer of this.mapData.layers) {
+            if (layer.type === 'objectgroup' && layer.objects) {
+                // Filter collision objects (by type or name)
+                const collisions = layer.objects.filter(
+                    (obj) => obj.type === 'collision' || obj.name.toLowerCase().includes('collision')
+                )
+
+                this.collisionObjects.push(...collisions)
+            }
+        }
+
+        console.log(`Found ${this.collisionObjects.length} collision objects`)
+    }
+
     getContainer(): PIXI.Container {
         return this.container
     }
 
     getMapData(): TiledMap | null {
         return this.mapData
+    }
+
+    getCollisionObjects(): TiledObject[] {
+        return this.collisionObjects
     }
 }
