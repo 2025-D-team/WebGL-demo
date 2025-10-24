@@ -1,0 +1,59 @@
+@import 'modern-normalize';
+@import 'variables';
+
+// Global styles
+:where(a, button) {
+  text-decoration: none !important;
+  color: #000;
+  cursor: pointer !important;
+}
+:where(img, svg) {
+  max-width: 100%;
+  max-height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+:where(button, input, textarea) {
+  outline: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  user-select: none;
+}
+html {
+  font-size: 62.5%;
+  box-sizing: border-box;
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+ol,
+ul,
+li {
+  margin: 0;
+}
+dl,
+dd,
+dt {
+  margin: 0;
+}
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+}
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: $background-color;
+  color: $text-color;
+  line-height: 1.6;
+  font-size: 1.6rem;
+}
