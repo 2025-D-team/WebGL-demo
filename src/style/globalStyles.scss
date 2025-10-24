@@ -1,5 +1,5 @@
-@import 'modern-normalize';
-@import 'variables';
+@use 'modern-normalize';
+@use 'variables' as *;
 
 // Global styles
 :where(a, button) {
