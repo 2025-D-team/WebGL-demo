@@ -41,6 +41,15 @@ export interface TiledTileset {
     imageheight?: number
     margin?: number // Margin around tileset
     spacing?: number // Spacing between tiles
+    tiles?: TiledTileData[] // Individual tile data with properties
+}
+
+export interface TiledTileData {
+    id: number // Local tile ID (not GID)
+    properties?: TiledProperty[]
+    objectgroup?: {
+        objects: TiledObject[]
+    }
 }
 
 export interface TiledObject {

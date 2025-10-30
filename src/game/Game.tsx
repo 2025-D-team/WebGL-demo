@@ -57,13 +57,13 @@ export const Game = () => {
                 }
 
                 // Initialize character at center of map
-                const character = new Character(mapWidth / 2, mapHeight / 2)
+                const character = new Character(90, mapHeight / 1.5)
                 await character.init()
                 characterRef.current = character
 
                 // Add character to mapContainer (so it moves with camera)
                 mapContainer.addChild(character.getContainer())
-                console.log('Character added to map at:', mapWidth / 2, mapHeight / 2)
+                console.log('Character added to map at:', 90, mapHeight / 1.5)
 
                 // Load collision objects from map
                 const collisionManager = new CollisionManager()

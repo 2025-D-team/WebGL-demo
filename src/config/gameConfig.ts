@@ -7,14 +7,14 @@
 export const GameConfig = {
     // Character Settings
     character: {
-        speed: 200, // pixels per second (framerate independent)
+        speed: 400, // pixels per second (framerate independent)
         size: 32, // character hitbox size (matches tile size)
-        animationSpeed: 0.15, // animation playback speed
+        animationSpeed: 0.2, // animation playback speed
     },
 
     // Map Settings
     map: {
-        tileSize: 32, // size of each tile in pixels
+        tileSize: 64, // size of each tile in pixels
         padding: 32, // padding from map edges (prevents character from going outside)
     },
 
