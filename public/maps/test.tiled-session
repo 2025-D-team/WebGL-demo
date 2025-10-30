@@ -9,33 +9,75 @@
     ],
     "exportAsImage.drawTileGrid": true,
     "fileStates": {
+        "": {
+            "scaleInDock": 1
+        },
         ":/automap-tiles.tsx": {
             "scaleInDock": 0.73
+        },
+        "[Base]BaseChip_pipo.tsj": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 2.2
         },
         "[Base]BaseChip_pipo.tsx": {
             "dynamicWrapping": false,
             "scaleInDock": 0.73,
             "scaleInEditor": 4.87
         },
+        "map_02.tsj": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 2.2
+        },
         "map_02.tsx": {
             "scaleInDock": 0.73,
             "scaleInEditor": 1
         },
+        "map_bese.tsj": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 0.783
+        },
+        "map_chip.tsj": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 2.2
+        },
         "map_demo.tmx": {
-            "scale": 0.773,
-            "selectedLayer": 1,
+            "scale": 0.2186,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 492.23803363518755,
-                "y": 657.1798188874513
+                "x": 1530.192131747484,
+                "y": 1559.926806953339
             }
+        },
+        "map_demo.tmx#map_02": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1
         },
         "map_object-tip.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 4.87
         },
+        "map_wail.tsj": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "map_wall.tsj": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 2.2
+        },
         "part.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 4.87
+        },
+        "root.tsj": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1.4004
         },
         "root.tsx": {
             "scaleInDock": 0.73,
@@ -47,7 +89,8 @@
         }
     },
     "last.exportedFilePath": "/Users/s2240025/Desktop/team_d/d_team",
-    "last.imagePath": "/Users/s2240025/Desktop/map_test/MapChip",
+    "last.imagePath": "/Users/s2240025/Desktop/team_d/d_team/assets",
+    "lastUsedTilesetExportFilter": "JSON tileset files (*.tsj *.json)",
     "map.height": 96,
     "map.lastUsedExportFilter": "JSON map files (*.tmj *.json)",
     "map.lastUsedFormat": "tmx",
@@ -55,26 +98,34 @@
     "map.tileWidth": 32,
     "map.width": 96,
     "openFiles": [
-        "[Base]BaseChip_pipo.tsx",
         "map_demo.tmx",
-        "texture.tsx",
-        "part.tsx"
+        "root.tsj",
+        "map_chip.tsj",
+        "map_wall.tsj",
+        "map_bese.tsj"
     ],
     "project": "test.tiled-project",
     "recentFiles": [
+        "map_bese.tsj",
+        "map_wall.tsj",
+        "map_chip.tsj",
+        "root.tsj",
+        "map_demo.tmx",
+        "map_02.tsj",
+        "[Base]BaseChip_pipo.tsj",
+        "map_wail.tsj",
         "root.tsx",
         "[Base]BaseChip_pipo.tsx",
         "texture.tsx",
-        "map_object-tip.tsx",
-        "part.tsx",
-        "map_demo.tmx",
-        "map_02.tsx"
+        "map_object-tip.tsx"
     ],
+    "tileset.embedInMap": false,
     "tileset.lastUsedFormat": "json",
     "tileset.margin": 0,
     "tileset.spacing": 0,
     "tileset.tileSize": {
         "height": 32,
         "width": 32
-    }
+    },
+    "tileset.type": 0
 }

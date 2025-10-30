@@ -39,6 +39,8 @@ export interface TiledTileset {
     image?: string
     imagewidth?: number
     imageheight?: number
+    margin?: number // Margin around tileset
+    spacing?: number // Spacing between tiles
 }
 
 export interface TiledObject {

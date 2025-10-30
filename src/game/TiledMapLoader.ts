@@ -40,17 +40,19 @@ export class TiledMapLoader {
 
         for (const tileset of this.mapData.tilesets) {
             if (tileset.source) {
-                // External tileset - load .tsj file (from public/maps/)
+                // External tileset - load .tsj/.tsx file (from public/maps/)
                 try {
-                    const tsxPath = tileset.source.replace(/\.tsx$/, '.json') // Try JSON version
-                    const response = await fetch(`/maps/${tsxPath}`)
+                    const response = await fetch(`/maps/${tileset.source}`)
                     const tsxData = await response.json()
 
                     // Merge external tileset data
                     Object.assign(tileset, tsxData)
 
                     if (tileset.image) {
-                        await PIXI.Assets.load(`/maps/${tileset.image}`)
+                        // Prepend /maps/ to the image path
+                        const imagePath = `/maps/${tileset.image}`
+                        tileset.image = imagePath
+                        await PIXI.Assets.load(imagePath)
                     }
                 } catch (error) {
                     console.warn(`Failed to load external tileset: ${tileset.source}`, error)
@@ -65,7 +67,9 @@ export class TiledMapLoader {
                 }
             } else if (tileset.image) {
                 // Inline tileset (from public/maps/)
-                await PIXI.Assets.load(`/maps/${tileset.image}`)
+                const imagePath = `/maps/${tileset.image}`
+                tileset.image = imagePath
+                await PIXI.Assets.load(imagePath)
             }
         }
     }
@@ -124,8 +128,16 @@ export class TiledMapLoader {
         // Calculate tile position in tileset
         const localId = gid - tileset.firstgid
         const columns = tileset.columns || Math.floor((tileset.imagewidth || 0) / tileWidth)
-        const tileX = (localId % columns) * tileWidth
-        const tileY = Math.floor(localId / columns) * tileHeight
+
+        // Handle margin and spacing
+        const margin = tileset.margin || 0
+        const spacing = tileset.spacing || 0
+
+        const col = localId % columns
+        const row = Math.floor(localId / columns)
+
+        const tileX = margin + col * (tileWidth + spacing)
+        const tileY = margin + row * (tileHeight + spacing)
 
         // Create texture from tileset
         const baseTexture = PIXI.Texture.from(tileset.image)
