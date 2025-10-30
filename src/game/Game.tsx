@@ -36,7 +36,7 @@ export const Game = () => {
             // Load and render map
             try {
                 const mapLoader = new TiledMapLoader()
-                const mapContainer = await mapLoader.loadMap('/src/assets/maps/map_demo.tmj')
+                const mapContainer = await mapLoader.loadMap('/maps/map_demo.tmj')
                 mapContainerRef.current = mapContainer
 
                 app.stage.addChild(mapContainer)

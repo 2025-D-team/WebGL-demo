@@ -40,32 +40,32 @@ export class TiledMapLoader {
 
         for (const tileset of this.mapData.tilesets) {
             if (tileset.source) {
-                // External tileset - load .tsx file
+                // External tileset - load .tsj file (from public/maps/)
                 try {
                     const tsxPath = tileset.source.replace(/\.tsx$/, '.json') // Try JSON version
-                    const response = await fetch(`/src/assets/maps/${tsxPath}`)
+                    const response = await fetch(`/maps/${tsxPath}`)
                     const tsxData = await response.json()
 
                     // Merge external tileset data
                     Object.assign(tileset, tsxData)
 
                     if (tileset.image) {
-                        await PIXI.Assets.load(`/src/assets/maps/${tileset.image}`)
+                        await PIXI.Assets.load(`/maps/${tileset.image}`)
                     }
                 } catch (error) {
                     console.warn(`Failed to load external tileset: ${tileset.source}`, error)
-                    // Fallback: try to use map_demo.png as default tileset
-                    tileset.image = '/src/assets/maps/map_demo.png'
-                    tileset.imagewidth = 3072
-                    tileset.imageheight = 3072
+                    // Fallback: try to use root.png as default tileset
+                    tileset.image = '/maps/root.png'
+                    tileset.imagewidth = 1000
+                    tileset.imageheight = 1000
                     tileset.tilewidth = 32
                     tileset.tileheight = 32
-                    tileset.columns = 96
+                    tileset.columns = 31
                     await PIXI.Assets.load(tileset.image)
                 }
             } else if (tileset.image) {
-                // Inline tileset
-                await PIXI.Assets.load(`/src/assets/maps/${tileset.image}`)
+                // Inline tileset (from public/maps/)
+                await PIXI.Assets.load(`/maps/${tileset.image}`)
             }
         }
     }

@@ -38,10 +38,10 @@ export const GameConfig = {
         movementPriority: ['up', 'down', 'left', 'right'] as const,
     },
 
-    // Asset Paths
+    // Asset Paths (from public folder)
     assets: {
-        characterFrames: '/src/assets/char_demo/frames',
-        maps: '/src/assets/maps',
+        characterFrames: '/char_demo/frames',
+        maps: '/maps',
     },
 
     // Animation Frame Counts
