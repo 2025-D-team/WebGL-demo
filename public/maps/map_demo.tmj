@@ -316,9 +316,6 @@
          "height":96,
          "id":11,
          "name":"\u58c1",
-         "properties": [
-            { "name": "collides", "type": "bool", "value": true }
-         ],
          "opacity":1,
          "type":"tilelayer",
          "visible":true,
@@ -426,9 +423,6 @@
          "height":96,
          "id":16,
          "name":"\u58c1_\u6a2a",
-         "properties": [
-            { "name": "collides", "type": "bool", "value": true }
-         ],
          "opacity":1,
          "type":"tilelayer",
          "visible":true,

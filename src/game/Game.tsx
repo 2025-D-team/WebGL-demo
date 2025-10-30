@@ -70,6 +70,16 @@ export const Game = () => {
                 const collisionObjects = mapLoader.getCollisionObjects()
                 collisionManager.loadFromTiledObjects(collisionObjects)
 
+                // 🟥 DEBUG: Visualize collision boxes
+                const debugGraphics = new PIXI.Graphics()
+                for (const rect of collisionManager.getCollisionRects()) {
+                    debugGraphics.rect(rect.x, rect.y, rect.width, rect.height)
+                }
+                debugGraphics.stroke({ width: 2, color: 0xff0000 }) // Red outline
+                debugGraphics.alpha = 0.5
+                mapContainer.addChild(debugGraphics)
+                console.log('🟥 Debug: Drew collision boxes')
+
                 // Initialize input handler
                 const inputHandler = new InputHandler()
                 inputHandlerRef.current = inputHandler
