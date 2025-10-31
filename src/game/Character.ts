@@ -26,7 +26,8 @@ export class Character {
 
         if (name !== undefined) {
             const display = name && name.trim().length > 0 ? name.trim() : ''
-            const fgStyle = { fontFamily: 'Arial', fontSize: 13, fill: '#ffffff' }
+            // Use red fill for local player with black bg copies for outline
+            const fgStyle = { fontFamily: 'Arial', fontSize: 13, fill: '#d4a5a5ff' }
             const bgStyle = { fontFamily: 'Arial', fontSize: 13, fill: '#000000' }
 
             const offsets: [number, number][] = [

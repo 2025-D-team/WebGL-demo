@@ -49,7 +49,7 @@ function NamePrompt({ onConfirm }: { onConfirm: (name: string) => void }) {
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') confirm()
                     }}
-                    style={{ width: '100%', padding: '8px 10px', marginBottom: 10 }}
+                    style={{ width: '100%', padding: '8px 10px', marginBottom: 10, border: '1px solid #ccc' }}
                 />
                 <div style={{ textAlign: 'right' }}>
                     <button
