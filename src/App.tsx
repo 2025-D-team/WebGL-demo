@@ -46,6 +46,9 @@ function NamePrompt({ onConfirm }: { onConfirm: (name: string) => void }) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder='例：Player123'
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') confirm()
+                    }}
                     style={{ width: '100%', padding: '8px 10px', marginBottom: 10 }}
                 />
                 <div style={{ textAlign: 'right' }}>
