@@ -15,11 +15,50 @@ export class Character {
     private width: number = GameConfig.character.size
     private height: number = GameConfig.character.size
 
-    constructor(x: number, y: number) {
+    private nameText: PIXI.Text | null = null
+    private nameBgTexts: PIXI.Text[] = []
+
+    constructor(x: number, y: number, name?: string) {
         this.container = new PIXI.Container()
         this.position = { x, y }
         this.container.x = x
         this.container.y = y
+
+        if (name !== undefined) {
+            const display = name && name.trim().length > 0 ? name.trim() : ''
+            const fgStyle = { fontFamily: 'Arial', fontSize: 13, fill: '#ffffff' }
+            const bgStyle = { fontFamily: 'Arial', fontSize: 13, fill: '#000000' }
+
+            const offsets: [number, number][] = [
+                [-1, 0],
+                [1, 0],
+                [0, -1],
+                [0, 1],
+            ]
+
+            for (const [ox, oy] of offsets) {
+                const bg = new PIXI.Text(display, new PIXI.TextStyle(bgStyle))
+                bg.anchor.set(0.5, 1)
+                bg.x = ox
+                bg.y = -GameConfig.character.size - 5 + oy
+                bg.resolution = 2
+                this.container.addChild(bg)
+                this.nameBgTexts.push(bg)
+            }
+
+            this.nameText = new PIXI.Text(display, new PIXI.TextStyle(fgStyle))
+            this.nameText.anchor.set(0.5, 1)
+            this.nameText.y = -GameConfig.character.size - 5
+            this.nameText.resolution = 2
+            this.container.addChild(this.nameText)
+        }
+    }
+
+    setName(name: string) {
+        if (!this.nameText) return
+        const display = name && name.trim().length > 0 ? name.trim() : ''
+        this.nameText.text = display
+        this.nameBgTexts.forEach((t: PIXI.Text) => (t.text = display))
     }
 
     async init() {

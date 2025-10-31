@@ -10,7 +10,7 @@ import { MultiplayerManager, type PlayerData } from './MultiplayerManager'
 import { RemotePlayer } from './RemotePlayer'
 import { TiledMapLoader } from './TiledMapLoader'
 
-export const Game = () => {
+export const Game = ({ playerName = '' }: { playerName?: string }) => {
     const canvasRef = useRef<HTMLDivElement>(null)
     const appRef = useRef<PIXI.Application | null>(null)
     const characterRef = useRef<Character | null>(null)
@@ -64,8 +64,8 @@ export const Game = () => {
                     mapContainer.scale.set(1)
                 }
 
-                // Initialize character at center of map
-                const character = new Character(90, mapHeight / 1.5)
+                // Initialize character at center of map; include the local player's name label
+                const character = new Character(90, mapHeight / 1.5, playerName)
                 await character.init()
                 characterRef.current = character
 
@@ -93,11 +93,11 @@ export const Game = () => {
                 inputHandlerRef.current = inputHandler
 
                 // Initialize multiplayer
-                if (GameConfig.multiplayer.enabled && mapContainer) {
+                if (GameConfig.multiplayer.enabled && mapContainer && !multiplayerRef.current) {
                     const multiplayer = new MultiplayerManager({
                         onPlayerJoined: async (player: PlayerData) => {
                             console.log('🎮 Remote player joined:', player.id)
-                            const remotePlayer = new RemotePlayer(player.id, player.x, player.y)
+                            const remotePlayer = new RemotePlayer(player.id, player.x, player.y, player.name)
                             await remotePlayer.init()
                             mapContainer.addChild(remotePlayer.getContainer())
                             remotePlayersRef.current.set(player.id, remotePlayer)
@@ -122,8 +122,21 @@ export const Game = () => {
                                 remotePlayersRef.current.delete(playerId)
                             }
                         },
+                        onPlayerUpdated: (player: PlayerData) => {
+                            // Update name for an existing remote player
+                            const remotePlayer = remotePlayersRef.current.get(player.id)
+                            if (remotePlayer && player.name !== undefined) {
+                                remotePlayer.setName(player.name)
+                            }
+                            // If update refers to local player, update local label
+                            const localId = multiplayerRef.current?.getLocalPlayerId()
+                            if (localId === player.id && player.name !== undefined && characterRef.current) {
+                                characterRef.current.setName(player.name)
+                            }
+                        },
                     })
-                    multiplayer.connect()
+                    // Pass the playerName from App to the server on connect so server stores it on join
+                    multiplayer.connect(playerName)
                     multiplayerRef.current = multiplayer
                     localMultiplayer = multiplayer
                 }
@@ -232,7 +245,7 @@ export const Game = () => {
                 appRef.current = null
             }
         }
-    }, [])
+    }, [playerName])
 
     return (
         <div

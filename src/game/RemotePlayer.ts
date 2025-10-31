@@ -8,27 +8,48 @@ export class RemotePlayer {
     private currentDirection: 'down' | 'up' | 'left' | 'right' = 'down'
     private playerId: string
     private nameText: PIXI.Text
+    private nameBgTexts: PIXI.Text[] = []
     private isMoving: boolean = false
 
-    constructor(playerId: string, x: number, y: number) {
+    constructor(playerId: string, x: number, y: number, name?: string) {
         this.playerId = playerId
         this.container = new PIXI.Container()
         this.container.x = x
         this.container.y = y
 
-        // Add player name label
-        this.nameText = new PIXI.Text({
-            text: `Player ${playerId.slice(0, 6)}`,
-            style: {
-                fontFamily: 'Arial',
-                fontSize: 12,
-                fill: 0xffffff,
-                align: 'center',
-            },
-        })
+        // Add player name label using simple bg copies for a clear outline + white foreground
+        const displayName = name && name.trim().length > 0 ? name.trim() : `Player ${playerId.slice(0, 6)}`
+        const fgStyle = { fontFamily: 'Arial', fontSize: 14, fill: '#ffffff' }
+        const bgStyle = { fontFamily: 'Arial', fontSize: 14, fill: '#000000' }
+
+        const offsets: [number, number][] = [
+            [-1, 0],
+            [1, 0],
+            [0, -1],
+            [0, 1],
+        ]
+
+        for (const [ox, oy] of offsets) {
+            const bg = new PIXI.Text(displayName, new PIXI.TextStyle(bgStyle))
+            bg.anchor.set(0.5, 1)
+            bg.x = ox
+            bg.y = -GameConfig.character.size - 5 + oy
+            bg.resolution = 2
+            this.container.addChild(bg)
+            this.nameBgTexts.push(bg)
+        }
+
+        this.nameText = new PIXI.Text(displayName, new PIXI.TextStyle(fgStyle))
         this.nameText.anchor.set(0.5, 1)
         this.nameText.y = -GameConfig.character.size - 5
+        this.nameText.resolution = 2
         this.container.addChild(this.nameText)
+    }
+
+    setName(name: string) {
+        const display = name && name.trim().length > 0 ? name.trim() : `Player ${this.playerId.slice(0, 6)}`
+        this.nameText.text = display
+        this.nameBgTexts.forEach((t: PIXI.Text) => (t.text = display))
     }
 
     async init(): Promise<void> {
@@ -124,6 +145,7 @@ export class RemotePlayer {
         if (this.sprite) {
             this.sprite.destroy()
         }
+        this.nameBgTexts.forEach((t) => t.destroy())
         this.nameText.destroy()
         this.container.destroy()
     }

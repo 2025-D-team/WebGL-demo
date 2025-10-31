@@ -4,6 +4,7 @@ import { GameConfig } from '../config/gameConfig'
 
 export interface PlayerData {
     id: string
+    name?: string
     x: number
     y: number
     direction: 'down' | 'up' | 'left' | 'right'
@@ -14,6 +15,7 @@ export interface MultiplayerCallbacks {
     onPlayerJoined?: (player: PlayerData) => void
     onPlayerMoved?: (player: PlayerData) => void
     onPlayerLeft?: (playerId: string) => void
+    onPlayerUpdated?: (player: PlayerData) => void
 }
 
 export class MultiplayerManager {
@@ -26,7 +28,7 @@ export class MultiplayerManager {
         this.callbacks = callbacks
     }
 
-    connect(): void {
+    connect(name?: string): void {
         if (!GameConfig.multiplayer.enabled) {
             console.log('Multiplayer is disabled in config')
             return
@@ -49,9 +51,11 @@ export class MultiplayerManager {
             console.log('✅ Connected to multiplayer server:', this.localPlayerId)
 
             // Notify server that this player has joined (server will reply with 'game:init')
-            // We send an empty object — server will apply defaults if position/name are omitted.
+            // Include name passed into connect() if provided.
             try {
-                this.socket!.emit('player:join', {})
+                const payload: { name?: string } = {}
+                if (typeof name === 'string' && name.trim().length > 0) payload.name = name.trim()
+                this.socket!.emit('player:join', payload)
             } catch (err) {
                 console.warn('Failed to emit player:join', err)
             }
@@ -79,8 +83,14 @@ export class MultiplayerManager {
 
         // Player events (using colon format to match server)
         this.socket.on('player:joined', (player: PlayerData) => {
-            console.log('Player joined:', player.id)
+            console.log('Player joined:', player.id, player.name)
             this.callbacks.onPlayerJoined?.(player)
+        })
+
+        // Handle updates to player object (name changes etc.)
+        this.socket.on('player:updated', (player: PlayerData) => {
+            console.log('Player updated:', player.id, player.name)
+            this.callbacks.onPlayerUpdated?.(player)
         })
 
         this.socket.on('player:moved', (player: PlayerData) => {
@@ -91,6 +101,19 @@ export class MultiplayerManager {
             console.log('Player left:', data.id)
             this.callbacks.onPlayerLeft?.(data.id)
         })
+    }
+
+    // Allow setting/updating the local player's name after connection
+    setName(name: string): void {
+        if (!name) return
+        try {
+            // Do NOT persist to localStorage - per-tab input only.
+            if (this.connected && this.socket) {
+                this.socket.emit('player:setName', name)
+            }
+        } catch (err) {
+            console.warn('Failed to set player name', err)
+        }
     }
 
     disconnect(): void {
