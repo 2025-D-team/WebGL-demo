@@ -93,7 +93,7 @@ export const Game = () => {
                 inputHandlerRef.current = inputHandler
 
                 // Initialize multiplayer
-                    if (GameConfig.multiplayer.enabled && mapContainer) {
+                if (GameConfig.multiplayer.enabled && mapContainer) {
                     const multiplayer = new MultiplayerManager({
                         onPlayerJoined: async (player: PlayerData) => {
                             console.log('🎮 Remote player joined:', player.id)
@@ -105,7 +105,12 @@ export const Game = () => {
                         onPlayerMoved: (player: PlayerData) => {
                             const remotePlayer = remotePlayersRef.current.get(player.id)
                             if (remotePlayer) {
-                                remotePlayer.updatePosition(player.x, player.y, player.direction, player.isMoving ?? true)
+                                remotePlayer.updatePosition(
+                                    player.x,
+                                    player.y,
+                                    player.direction,
+                                    player.isMoving ?? true
+                                )
                             }
                         },
                         onPlayerLeft: (playerId: string) => {
