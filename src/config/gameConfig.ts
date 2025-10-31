@@ -64,10 +64,10 @@ export const GameConfig = {
         debugDraw: false, // draw collision rectangles for debugging
     },
 
-    // Multiplayer Settings (future use)
+    // Multiplayer Settings
     multiplayer: {
-        enabled: false,
-        serverUrl: 'ws://localhost:3000',
+        enabled: true, // Enable multiplayer
+        serverUrl: import.meta.env.VITE_SERVER_URL || 'http://localhost:3000',
         reconnectAttempts: 3,
         reconnectDelay: 1000, // ms
     },

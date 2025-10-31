@@ -6,6 +6,8 @@ import { GameConfig } from '../config/gameConfig'
 import { Character } from './Character'
 import { CollisionManager } from './CollisionManager'
 import { InputHandler } from './InputHandler'
+import { MultiplayerManager, type PlayerData } from './MultiplayerManager'
+import { RemotePlayer } from './RemotePlayer'
 import { TiledMapLoader } from './TiledMapLoader'
 
 export const Game = () => {
@@ -14,8 +16,14 @@ export const Game = () => {
     const characterRef = useRef<Character | null>(null)
     const inputHandlerRef = useRef<InputHandler | null>(null)
     const mapContainerRef = useRef<PIXI.Container | null>(null)
+    const multiplayerRef = useRef<MultiplayerManager | null>(null)
+    const remotePlayersRef = useRef<Map<string, RemotePlayer>>(new Map())
 
     useEffect(() => {
+        // Local copies for cleanup closure (avoid ref-value changed warnings)
+        let localMultiplayer: MultiplayerManager | null = null
+        const remotePlayers = remotePlayersRef.current
+
         const initGame = async () => {
             if (!canvasRef.current || appRef.current) return
 
@@ -84,6 +92,37 @@ export const Game = () => {
                 const inputHandler = new InputHandler()
                 inputHandlerRef.current = inputHandler
 
+                // Initialize multiplayer
+                    if (GameConfig.multiplayer.enabled && mapContainer) {
+                    const multiplayer = new MultiplayerManager({
+                        onPlayerJoined: async (player: PlayerData) => {
+                            console.log('🎮 Remote player joined:', player.id)
+                            const remotePlayer = new RemotePlayer(player.id, player.x, player.y)
+                            await remotePlayer.init()
+                            mapContainer.addChild(remotePlayer.getContainer())
+                            remotePlayersRef.current.set(player.id, remotePlayer)
+                        },
+                        onPlayerMoved: (player: PlayerData) => {
+                            const remotePlayer = remotePlayersRef.current.get(player.id)
+                            if (remotePlayer) {
+                                remotePlayer.updatePosition(player.x, player.y, player.direction, player.isMoving ?? true)
+                            }
+                        },
+                        onPlayerLeft: (playerId: string) => {
+                            console.log('👋 Remote player left:', playerId)
+                            const remotePlayer = remotePlayersRef.current.get(playerId)
+                            if (remotePlayer) {
+                                mapContainer.removeChild(remotePlayer.getContainer())
+                                remotePlayer.destroy()
+                                remotePlayersRef.current.delete(playerId)
+                            }
+                        },
+                    })
+                    multiplayer.connect()
+                    multiplayerRef.current = multiplayer
+                    localMultiplayer = multiplayer
+                }
+
                 // Camera deadzone settings from config
                 const deadzoneWidth = window.innerWidth * GameConfig.camera.deadzoneWidthPercent
                 const deadzoneHeight = window.innerHeight * GameConfig.camera.deadzoneHeightPercent
@@ -110,12 +149,21 @@ export const Game = () => {
 
                     // Get input direction
                     const direction = inputHandler.getDirection()
+                    const isMoving = direction !== null
 
                     // Move character (with map bounds and collision check)
                     const charSize = characterRef.current.getSize()
                     characterRef.current.move(direction, deltaTime, mapBounds, (newX, newY, oldX, oldY) =>
                         collisionManager.getValidPosition(newX, newY, oldX, oldY, charSize.width, charSize.height)
                     )
+
+                    // Send position to multiplayer server (only when moving to reduce bandwidth)
+                    if (multiplayerRef.current && multiplayerRef.current.isConnected()) {
+                        const pos = characterRef.current.getPosition()
+                        const dir = characterRef.current.getCurrentDirection()
+                        // Always send updates to keep sync, but include isMoving flag
+                        multiplayerRef.current.sendPosition(pos.x, pos.y, dir, isMoving)
+                    }
 
                     // Camera follow with deadzone
                     const charPos = characterRef.current.getPosition()
@@ -162,9 +210,18 @@ export const Game = () => {
 
         // Cleanup
         return () => {
+            // Disconnect multiplayer (use captured localMultiplayer)
+            if (localMultiplayer) {
+                localMultiplayer.disconnect()
+            }
+            // Cleanup remote players (use captured remotePlayers)
+            remotePlayers.forEach((player) => player.destroy())
+            remotePlayers.clear()
+            // Cleanup input handler
             if (inputHandlerRef.current) {
                 inputHandlerRef.current.destroy()
             }
+            // Cleanup PixiJS app
             if (appRef.current) {
                 appRef.current.destroy(true, { children: true })
                 appRef.current = null

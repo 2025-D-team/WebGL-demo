@@ -199,4 +199,8 @@ export class Character {
     getSize(): { width: number; height: number } {
         return { width: this.width, height: this.height }
     }
+
+    getCurrentDirection(): Direction {
+        return this.currentDirection
+    }
 }
