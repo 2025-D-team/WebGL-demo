@@ -41,8 +41,11 @@ export class RemotePlayer {
         const frameCount = GameConfig.animations.walkDown // All directions have same frame count
 
         const textures: PIXI.Texture[] = []
+        // Some maps / assets don't include separate left-facing frames.
+        // The project convention is: use 'walk-right' frames and flip for left.
+        const sourceDirection = direction === 'left' ? 'right' : direction
         for (let i = 1; i <= frameCount; i++) {
-            const framePath = `${basePath}/walk-${direction}-${i.toString().padStart(3, '0')}.png`
+            const framePath = `${basePath}/walk-${sourceDirection}-${i.toString().padStart(3, '0')}.png`
             const texture = await PIXI.Assets.load(framePath)
             textures.push(texture)
         }
