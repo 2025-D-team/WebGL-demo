@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import * as PIXI from 'pixi.js'
 
@@ -18,6 +18,15 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
     const mapContainerRef = useRef<PIXI.Container | null>(null)
     const multiplayerRef = useRef<MultiplayerManager | null>(null)
     const remotePlayersRef = useRef<Map<string, RemotePlayer>>(new Map())
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+
+    const selectEmoji = (emoji: string) => {
+        // Show locally immediately
+        if (characterRef.current) characterRef.current.showEmoji(emoji, 2000)
+        // Send to server so others see it
+        if (multiplayerRef.current) multiplayerRef.current.sendEmoji(emoji, 2000)
+        setShowEmojiPicker(false)
+    }
 
     useEffect(() => {
         // Local copies for cleanup closure (avoid ref-value changed warnings)
@@ -134,6 +143,17 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                 characterRef.current.setName(player.name)
                             }
                         },
+                        onPlayerEmoji: (data) => {
+                            // Display emoji for remote or local players
+                            const localId = multiplayerRef.current?.getLocalPlayerId()
+                            if (data.id === localId) {
+                                // Update local character
+                                if (characterRef.current) characterRef.current.showEmoji(data.emoji, data.duration)
+                            } else {
+                                const remote = remotePlayersRef.current.get(data.id)
+                                if (remote) remote.showEmoji(data.emoji, data.duration)
+                            }
+                        },
                     })
                     // Pass the playerName from App to the server on connect so server stores it on join
                     multiplayer.connect(playerName)
@@ -247,17 +267,128 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         }
     }, [playerName])
 
+    // Emoji list for picker
+    const emojis = [
+        '😄',
+        '😀',
+        '😂',
+        '🤣',
+        '😊',
+        '🙂',
+        '😉',
+        '😍',
+        '😘',
+        '🥰',
+        '😇',
+        '🤩',
+        '😮',
+        '😲',
+        '😢',
+        '😡',
+        '😤',
+        '😱',
+        '👍',
+        '👎',
+        '👏',
+        '🙏',
+        '🤝',
+        '🤘',
+        '🤞',
+        '✌️',
+        '👌',
+        '🤏',
+        '🎉',
+        '🎊',
+        '❤️',
+        '💔',
+        '🔥',
+        '🌟',
+        '✨',
+        '⭐',
+        '🌈',
+        '☀️',
+        '🍕',
+        '🍔',
+        '🍣',
+        '🍩',
+        '🍪',
+        '☕',
+        '🍺',
+        '🍷',
+        '🏆',
+        '🎮',
+        '🐶',
+        '🐱',
+        '🐼',
+        '🐵',
+        '🦊',
+        '🦁',
+        '🐯',
+        '🐸',
+        '🐙',
+        '🐧',
+        '🤖',
+        '👾',
+        '💡',
+        '📣',
+        '📌',
+        '🔔',
+        '🎵',
+        '🎧',
+        '🧭',
+        '🪄',
+    ]
+
     return (
-        <div
-            ref={canvasRef}
-            style={{
-                width: '100%',
-                height: '100vh',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                overflow: 'hidden',
-            }}
-        />
+        <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
+            <div
+                ref={canvasRef}
+                style={{
+                    width: '100%',
+                    height: '100vh',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    overflow: 'hidden',
+                }}
+            />
+
+            {/* Emoji button + picker (DOM overlay) */}
+            <div style={{ position: 'absolute', bottom: 20, right: 20, zIndex: 9999 }}>
+                <button
+                    onClick={() => setShowEmojiPicker((s) => !s)}
+                    style={{ padding: '8px 12px', fontSize: 16, borderRadius: 8 }}
+                >
+                    😊
+                </button>
+
+                {showEmojiPicker && (
+                    <div
+                        style={{
+                            marginTop: 8,
+                            background: 'rgba(0,0,0,0.85)',
+                            padding: 8,
+                            borderRadius: 8,
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(6, 40px)',
+                            gap: 8,
+                            maxHeight: 220,
+                            overflowY: 'auto',
+                            boxShadow: '0 6px 30px rgba(0,0,0,0.5)',
+                        }}
+                    >
+                        {emojis.map((e) => (
+                            <button
+                                key={e}
+                                onClick={() => selectEmoji(e)}
+                                style={{ fontSize: 20, width: 40, height: 40, borderRadius: 6 }}
+                            >
+                                {e}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
     )
 }

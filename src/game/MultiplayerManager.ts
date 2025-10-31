@@ -16,6 +16,7 @@ export interface MultiplayerCallbacks {
     onPlayerMoved?: (player: PlayerData) => void
     onPlayerLeft?: (playerId: string) => void
     onPlayerUpdated?: (player: PlayerData) => void
+    onPlayerEmoji?: (data: { id: string; emoji: string; duration: number }) => void
 }
 
 export class MultiplayerManager {
@@ -97,6 +98,11 @@ export class MultiplayerManager {
             this.callbacks.onPlayerMoved?.(player)
         })
 
+        // Player emoji events
+        this.socket.on('player:emoji', (data: { id: string; emoji: string; duration: number }) => {
+            this.callbacks.onPlayerEmoji?.(data)
+        })
+
         this.socket.on('player:left', (data: { id: string }) => {
             console.log('Player left:', data.id)
             this.callbacks.onPlayerLeft?.(data.id)
@@ -139,5 +145,15 @@ export class MultiplayerManager {
 
     getLocalPlayerId(): string | null {
         return this.localPlayerId
+    }
+
+    // Send an emoji that should be displayed above this player's character for `duration` ms
+    sendEmoji(emoji: string, duration = 2000): void {
+        if (!this.connected || !this.socket) return
+        try {
+            this.socket.emit('player:emoji', { emoji, duration })
+        } catch (err) {
+            console.warn('Failed to send emoji', err)
+        }
     }
 }

@@ -17,6 +17,7 @@ export class Character {
 
     private nameText: PIXI.Text | null = null
     private nameBgTexts: PIXI.Text[] = []
+    private emojiText: PIXI.Text | null = null
 
     constructor(x: number, y: number, name?: string) {
         this.container = new PIXI.Container()
@@ -60,6 +61,33 @@ export class Character {
         const display = name && name.trim().length > 0 ? name.trim() : ''
         this.nameText.text = display
         this.nameBgTexts.forEach((t: PIXI.Text) => (t.text = display))
+    }
+
+    showEmoji(emoji: string, duration = 2000) {
+        // Remove existing emoji if present
+        if (this.emojiText) {
+            this.emojiText.destroy()
+            this.emojiText = null
+        }
+
+        if (!emoji) return
+
+        const style = new PIXI.TextStyle({ fontSize: 28, fontFamily: 'Arial' })
+        const txt = new PIXI.Text(emoji, style)
+        txt.anchor.set(0.5, 1)
+        // Position slightly above the name / head
+        txt.y = -GameConfig.character.size - 25
+        txt.resolution = 2
+        this.container.addChild(txt)
+        this.emojiText = txt
+
+        // Auto-remove after duration
+        setTimeout(() => {
+            if (this.emojiText) {
+                this.emojiText.destroy()
+                this.emojiText = null
+            }
+        }, duration)
     }
 
     async init() {

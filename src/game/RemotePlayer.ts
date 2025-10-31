@@ -10,6 +10,7 @@ export class RemotePlayer {
     private nameText: PIXI.Text
     private nameBgTexts: PIXI.Text[] = []
     private isMoving: boolean = false
+    private emojiText: PIXI.Text | null = null
 
     constructor(playerId: string, x: number, y: number, name?: string) {
         this.playerId = playerId
@@ -50,6 +51,28 @@ export class RemotePlayer {
         const display = name && name.trim().length > 0 ? name.trim() : `Player ${this.playerId.slice(0, 6)}`
         this.nameText.text = display
         this.nameBgTexts.forEach((t: PIXI.Text) => (t.text = display))
+    }
+
+    showEmoji(emoji: string, duration = 2000) {
+        if (this.emojiText) {
+            this.emojiText.destroy()
+            this.emojiText = null
+        }
+        if (!emoji) return
+        const style = new PIXI.TextStyle({ fontSize: 28, fontFamily: 'Arial' })
+        const txt = new PIXI.Text(emoji, style)
+        txt.anchor.set(0.5, 1)
+        txt.y = -GameConfig.character.size - 25
+        txt.resolution = 2
+        this.container.addChild(txt)
+        this.emojiText = txt
+
+        setTimeout(() => {
+            if (this.emojiText) {
+                this.emojiText.destroy()
+                this.emojiText = null
+            }
+        }, duration)
     }
 
     async init(): Promise<void> {
