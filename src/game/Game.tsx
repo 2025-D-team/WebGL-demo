@@ -7,7 +7,8 @@ import { Character } from './Character'
 import { ChestEntity } from './ChestEntity'
 import { CollisionManager } from './CollisionManager'
 import { InputHandler } from './InputHandler'
-import { type ChestData, MultiplayerManager, type PlayerData } from './MultiplayerManager'
+import { type ChestData, MultiplayerManager, type PlayerData, type RankingPlayer } from './MultiplayerManager'
+import { Ranking } from './Ranking'
 import { RemotePlayer } from './RemotePlayer'
 import { TiledMapLoader } from './TiledMapLoader'
 
@@ -25,6 +26,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
     const [nearbyChest, setNearbyChest] = useState<string | null>(null)
     const [nearbyChestPos, setNearbyChestPos] = useState<{ x: number; y: number } | null>(null)
     const [notification, setNotification] = useState<string | null>(null)
+    const [ranking, setRanking] = useState<RankingPlayer[]>([])
 
     const selectEmoji = (emoji: string) => {
         // Show locally immediately
@@ -79,14 +81,8 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                     mapContainer.scale.set(1)
                 }
 
-                // Initialize character at center of map; include the local player's name label
-                const character = new Character(90, mapHeight / 1.5, playerName)
-                await character.init()
-                characterRef.current = character
-
-                // Add character to mapContainer (so it moves with camera)
-                mapContainer.addChild(character.getContainer())
-                console.log('Character added to map at:', 90, mapHeight / 1.5)
+                // Character will be initialized after receiving game:init from server
+                // (to get the spawn position from backend)
 
                 // Load collision objects from map
                 const collisionManager = new CollisionManager()
@@ -119,6 +115,22 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 // Initialize multiplayer
                 if (GameConfig.multiplayer.enabled && mapContainer && !multiplayerRef.current) {
                     const multiplayer = new MultiplayerManager({
+                        onGameInit: async (initData) => {
+                            // Find local player data from server
+                            const localPlayerData = initData.players.find((p) => p.id === initData.playerId)
+                            if (localPlayerData && !characterRef.current) {
+                                // Initialize character with position from server
+                                console.log(
+                                    '🎮 Creating character at server position:',
+                                    localPlayerData.x,
+                                    localPlayerData.y
+                                )
+                                const character = new Character(localPlayerData.x, localPlayerData.y, playerName)
+                                await character.init()
+                                characterRef.current = character
+                                mapContainer.addChild(character.getContainer())
+                            }
+                        },
                         onPlayerJoined: async (player: PlayerData) => {
                             console.log('🎮 Remote player joined:', player.id)
                             const remotePlayer = new RemotePlayer(player.id, player.x, player.y, player.name)
@@ -242,6 +254,9 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             } else {
                                 console.log('❌ Failed to open chest:', result.reason || result.message)
                             }
+                        },
+                        onRankingUpdate: (rankingData: RankingPlayer[]) => {
+                            setRanking(rankingData)
                         },
                     })
                     // Pass the playerName from App to the server on connect so server stores it on join
@@ -561,6 +576,12 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                     ✓ {notification}
                 </div>
             )}
+
+            {/* World Ranking */}
+            <Ranking
+                players={ranking}
+                localPlayerId={multiplayerRef.current?.getLocalPlayerId() || null}
+            />
         </div>
     )
 }

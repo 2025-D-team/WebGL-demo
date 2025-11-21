@@ -19,7 +19,14 @@ export interface ChestData {
     solverId?: string | null
 }
 
+export interface RankingPlayer {
+    id: string
+    name: string
+    score: number
+}
+
 export interface MultiplayerCallbacks {
+    onGameInit?: (data: { playerId: string; players: PlayerData[]; chests?: ChestData[] }) => void
     onPlayerJoined?: (player: PlayerData) => void
     onPlayerMoved?: (player: PlayerData) => void
     onPlayerLeft?: (playerId: string) => void
@@ -30,6 +37,7 @@ export interface MultiplayerCallbacks {
     onChestDisappear?: (chestIds: string[]) => void
     onChestUpdate?: (chest: ChestData) => void
     onChestInteractResult?: (result: { success: boolean; chestId?: string; reason?: string; message?: string }) => void
+    onRankingUpdate?: (ranking: RankingPlayer[]) => void
 }
 
 export class MultiplayerManager {
@@ -87,7 +95,11 @@ export class MultiplayerManager {
         // Initialize player on server
         this.socket.on('game:init', (data: { playerId: string; players: PlayerData[]; chests?: ChestData[] }) => {
             console.log('✅ Game initialized, received', data.players.length, 'existing players')
-            // Load existing players
+            
+            // Notify about full game init first (includes local player data)
+            this.callbacks.onGameInit?.(data)
+            
+            // Load existing players (excluding self)
             data.players.forEach((player) => {
                 if (player.id !== this.localPlayerId) {
                     this.callbacks.onPlayerJoined?.(player)
@@ -146,6 +158,12 @@ export class MultiplayerManager {
         // Chest interaction result
         this.socket.on('chest:interact_result', (result) => {
             this.callbacks.onChestInteractResult?.(result)
+        })
+
+        // Ranking updates
+        this.socket.on('ranking:update', (data: { ranking: RankingPlayer[] }) => {
+            console.log('🏆 Ranking updated:', data.ranking.length, 'players')
+            this.callbacks.onRankingUpdate?.(data.ranking)
         })
     }
 
