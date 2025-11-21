@@ -8,6 +8,7 @@ import { ChestEntity } from './ChestEntity'
 import { CollisionManager } from './CollisionManager'
 import { InputHandler } from './InputHandler'
 import { type ChestData, MultiplayerManager, type PlayerData, type RankingPlayer } from './MultiplayerManager'
+import { QuestionPopup } from './QuestionPopup'
 import { Ranking } from './Ranking'
 import { RemotePlayer } from './RemotePlayer'
 import { TiledMapLoader } from './TiledMapLoader'
@@ -27,6 +28,11 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
     const [nearbyChestPos, setNearbyChestPos] = useState<{ x: number; y: number } | null>(null)
     const [notification, setNotification] = useState<string | null>(null)
     const [ranking, setRanking] = useState<RankingPlayer[]>([])
+    const [questionData, setQuestionData] = useState<{
+        chestId: string
+        question: string
+        timeLimit: number
+    } | null>(null)
 
     const selectEmoji = (emoji: string) => {
         // Show locally immediately
@@ -212,47 +218,82 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             }
                         },
                         onChestDisappear: (chestIds: string[]) => {
-                            // Chests disappeared (opened or out of range)
+                            // Chests disappeared (opened by someone)
                             for (const chestId of chestIds) {
                                 console.log('👋 Chest disappeared:', chestId)
                                 const chestEntity = chestsRef.current.get(chestId)
                                 if (chestEntity) {
-                                    // Check if chest is currently opening (don't remove yet)
-                                    // The onChestInteractResult will handle removal after animation
-                                    if (!chestEntity.isOpeningAnimation) {
-                                        if (mapContainer) mapContainer.removeChild(chestEntity.getContainer())
-                                        chestEntity.destroy()
-                                        chestsRef.current.delete(chestId)
-                                        // Clear nearby hint if this was the nearby chest
-                                        if (nearbyChest === chestId) {
-                                            setNearbyChest(null)
-                                        }
+                                    // Remove immediately without animation
+                                    // Animation only plays on correct answer (in onChestAnswerResult)
+                                    if (mapContainer) mapContainer.removeChild(chestEntity.getContainer())
+                                    chestEntity.destroy()
+                                    chestsRef.current.delete(chestId)
+                                    
+                                    // Clear nearby hint if this was the nearby chest
+                                    if (nearbyChest === chestId) {
+                                        setNearbyChest(null)
+                                    }
+                                    
+                                    // Check if this was the chest user was solving
+                                    if (questionData && questionData.chestId === chestId) {
+                                        setQuestionData(null)
+                                        setNotification('宝箱が他のプレイヤーに取られました！')
+                                        setTimeout(() => setNotification(null), 2000)
                                     }
                                 }
                             }
                         },
-                        onChestInteractResult: async (result) => {
-                            if (result.success && result.chestId) {
-                                // Show notification immediately
-                                setNotification('Chest opened!')
+                        onChestQuestion: (data) => {
+                            // Show question popup
+                            setQuestionData({
+                                chestId: data.chestId,
+                                question: data.question,
+                                timeLimit: data.timeLimit,
+                            })
+                        },
+                        onChestTimeout: (data) => {
+                            // Close popup and show timeout notification
+                            setQuestionData(null)
+                            setNotification(data.message || 'タイムアウトしました')
+                            setTimeout(() => setNotification(null), 2000)
+                        },
+                        onChestAnswerResult: async (result) => {
+                            // Get the chest entity before closing popup
+                            const currentChestId = questionData?.chestId
+                            const chestEntity = currentChestId ? chestsRef.current.get(currentChestId) : null
+                            
+                            // Close question popup
+                            setQuestionData(null)
+
+                            if (result.success) {
+                                // Correct answer - show success notification
+                                setNotification('正解！ +1ポイント')
                                 setTimeout(() => setNotification(null), 2000)
-
-                                const chestEntity = chestsRef.current.get(result.chestId)
-                                if (chestEntity) {
-                                    // Play animation (3 seconds total)
+                                
+                                // Play animation for correct answer
+                                if (chestEntity && currentChestId) {
                                     await chestEntity.playOpenAnimation()
-                                    // Remove chest after animation completes
-                                    if (mapContainer) mapContainer.removeChild(chestEntity.getContainer())
-                                    chestEntity.destroy()
-                                    chestsRef.current.delete(result.chestId)
-
-                                    // Clear nearby hint
-                                    if (nearbyChest === result.chestId) {
-                                        setNearbyChest(null)
-                                    }
+                                    // Chest will be removed by onChestDisappear event
                                 }
                             } else {
-                                console.log('❌ Failed to open chest:', result.reason || result.message)
+                                // Wrong answer or other error
+                                if (result.cooldown) {
+                                    setNotification(`不正解！ 5秒待ってください`)
+                                    setTimeout(() => setNotification(null), 3000)
+                                } else if (result.message) {
+                                    setNotification(result.message)
+                                    setTimeout(() => setNotification(null), 2000)
+                                } else if (result.reason) {
+                                    setNotification(result.reason)
+                                    setTimeout(() => setNotification(null), 2000)
+                                }
+                            }
+                        },
+                        onChestInteractResult: (result) => {
+                            // Handle errors from interact request (not from answer)
+                            if (!result.success && result.reason) {
+                                setNotification(result.reason)
+                                setTimeout(() => setNotification(null), 2000)
                             }
                         },
                         onRankingUpdate: (rankingData: RankingPlayer[]) => {
@@ -548,7 +589,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                 whiteSpace: 'nowrap',
                             }}
                         >
-                            Press <span style={{ color: '#ffd700' }}>F</span> to interact
+                            Fキーを押して <span style={{ color: '#ffd700' }}>開く</span>
                         </div>
                     )
                 })()}
@@ -582,6 +623,20 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 players={ranking}
                 localPlayerId={multiplayerRef.current?.getLocalPlayerId() || null}
             />
+
+            {/* Question Popup */}
+            {questionData && (
+                <QuestionPopup
+                    question={questionData.question}
+                    timeLimit={questionData.timeLimit}
+                    onSubmit={(answer) => {
+                        if (multiplayerRef.current) {
+                            multiplayerRef.current.submitAnswer(questionData.chestId, answer)
+                        }
+                    }}
+                    onClose={() => setQuestionData(null)}
+                />
+            )}
         </div>
     )
 }

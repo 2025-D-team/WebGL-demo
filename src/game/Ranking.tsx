@@ -51,7 +51,7 @@ export const Ranking = ({ players, localPlayerId }: RankingProps) => {
                     userSelect: 'none',
                 }}
             >
-                <span>🏆 World Ranking</span>
+                <span>🏆 世界ランキング</span>
                 <span style={{ fontSize: 18 }}>{isExpanded ? '▼' : '▶'}</span>
             </div>
 
@@ -73,7 +73,7 @@ export const Ranking = ({ players, localPlayerId }: RankingProps) => {
                                 fontSize: 13,
                             }}
                         >
-                            No players online
+                            オンラインプレイヤーなし
                         </div>
                     :   players.map((player, index) => (
                             <div

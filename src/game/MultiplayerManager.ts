@@ -37,6 +37,9 @@ export interface MultiplayerCallbacks {
     onChestDisappear?: (chestIds: string[]) => void
     onChestUpdate?: (chest: ChestData) => void
     onChestInteractResult?: (result: { success: boolean; chestId?: string; reason?: string; message?: string }) => void
+    onChestQuestion?: (data: { chestId: string; question: string; timeLimit: number }) => void
+    onChestAnswerResult?: (result: { success: boolean; message?: string; cooldown?: number; reason?: string }) => void
+    onChestTimeout?: (data: { chestId: string; message: string }) => void
     onRankingUpdate?: (ranking: RankingPlayer[]) => void
 }
 
@@ -95,10 +98,10 @@ export class MultiplayerManager {
         // Initialize player on server
         this.socket.on('game:init', (data: { playerId: string; players: PlayerData[]; chests?: ChestData[] }) => {
             console.log('✅ Game initialized, received', data.players.length, 'existing players')
-            
+
             // Notify about full game init first (includes local player data)
             this.callbacks.onGameInit?.(data)
-            
+
             // Load existing players (excluding self)
             data.players.forEach((player) => {
                 if (player.id !== this.localPlayerId) {
@@ -159,6 +162,27 @@ export class MultiplayerManager {
         this.socket.on('chest:interact_result', (result) => {
             this.callbacks.onChestInteractResult?.(result)
         })
+
+        // Chest question received
+        this.socket.on('chest:question', (data: { chestId: string; question: string; timeLimit: number }) => {
+            console.log('❓ Received question for chest:', data.chestId)
+            this.callbacks.onChestQuestion?.(data)
+        })
+
+        // Chest timeout event
+        this.socket.on('chest:timeout', (data: { chestId: string; message: string }) => {
+            console.log('⏰ Chest timeout:', data.chestId)
+            this.callbacks.onChestTimeout?.(data)
+        })
+
+        // Answer result
+        this.socket.on(
+            'chest:answer_result',
+            (result: { success: boolean; message?: string; cooldown?: number; reason?: string }) => {
+                console.log('✅ Answer result:', result.success ? 'Correct!' : 'Wrong')
+                this.callbacks.onChestAnswerResult?.(result)
+            }
+        )
 
         // Ranking updates
         this.socket.on('ranking:update', (data: { ranking: RankingPlayer[] }) => {
@@ -223,6 +247,39 @@ export class MultiplayerManager {
             this.socket.emit('chest:interact', { chestId })
         } catch (err) {
             console.warn('Failed to interact with chest', err)
+        }
+    }
+
+    // Submit answer to chest question via REST API
+    async submitAnswer(chestId: string, answer: string): Promise<void> {
+        if (!this.connected || !this.localPlayerId) return
+        
+        try {
+            console.log('📝 Submitting answer for chest:', chestId, 'Answer:', answer)
+            
+            const serverUrl = GameConfig.multiplayer.serverUrl
+            const response = await fetch(`${serverUrl}/api/chest/answer`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    chestId,
+                    answer,
+                    playerId: this.localPlayerId,
+                }),
+            })
+
+            const result = await response.json()
+            
+            // Trigger callback with API result
+            this.callbacks.onChestAnswerResult?.(result)
+        } catch (err) {
+            console.warn('Failed to submit answer', err)
+            this.callbacks.onChestAnswerResult?.({
+                success: false,
+                message: 'ネットワークエラーが発生しました',
+            })
         }
     }
 }
