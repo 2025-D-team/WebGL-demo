@@ -1,0 +1,31 @@
+{
+    "activeFile": "map_chip.tsj",
+    "expandedProjectPaths": [
+    ],
+    "file.lastUsedOpenFilter": "すべてのファイル (*)",
+    "fileStates": {
+        "map.tmj": {
+            "scale": 0.28,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 1535.7142857142856,
+                "y": 1514.2857142857144
+            }
+        },
+        "map_chip.tsj": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        }
+    },
+    "last.imagePath": "/Users/s2240025/Desktop/ウディタ2_32x32mapchip_20210215 2/MapChip",
+    "openFiles": [
+        "map.tmj",
+        "map_chip.tsj"
+    ],
+    "project": "team.tiled-project",
+    "recentFiles": [
+        "map.tmj",
+        "map_chip.tsj"
+    ],
+    "tileset.lastUsedFormat": "json"
+}
