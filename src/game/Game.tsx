@@ -218,27 +218,20 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             }
                         },
                         onChestDisappear: (chestIds: string[]) => {
-                            // Chests disappeared (opened by someone)
+                            // Chests disappeared - remove from map
                             for (const chestId of chestIds) {
                                 console.log('👋 Chest disappeared:', chestId)
+
                                 const chestEntity = chestsRef.current.get(chestId)
                                 if (chestEntity) {
-                                    // Remove immediately without animation
-                                    // Animation only plays on correct answer (in onChestAnswerResult)
+                                    // Remove chest from map (animation already played via chest:opened)
                                     if (mapContainer) mapContainer.removeChild(chestEntity.getContainer())
                                     chestEntity.destroy()
                                     chestsRef.current.delete(chestId)
-                                    
+
                                     // Clear nearby hint if this was the nearby chest
                                     if (nearbyChest === chestId) {
                                         setNearbyChest(null)
-                                    }
-                                    
-                                    // Check if this was the chest user was solving
-                                    if (questionData && questionData.chestId === chestId) {
-                                        setQuestionData(null)
-                                        setNotification('宝箱が他のプレイヤーに取られました！')
-                                        setTimeout(() => setNotification(null), 2000)
                                     }
                                 }
                             }
@@ -257,11 +250,16 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             setNotification(data.message || 'タイムアウトしました')
                             setTimeout(() => setNotification(null), 2000)
                         },
+                        onChestOpened: async (data) => {
+                            // Chest was opened by someone - play animation for all players
+                            const chestEntity = chestsRef.current.get(data.chestId)
+                            if (chestEntity) {
+                                console.log('🎉 Playing open animation for chest:', data.chestId)
+                                await chestEntity.playOpenAnimation()
+                                // Chest will be removed by entity:disappear event after animation
+                            }
+                        },
                         onChestAnswerResult: async (result) => {
-                            // Get the chest entity before closing popup
-                            const currentChestId = questionData?.chestId
-                            const chestEntity = currentChestId ? chestsRef.current.get(currentChestId) : null
-                            
                             // Close question popup
                             setQuestionData(null)
 
@@ -269,12 +267,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                 // Correct answer - show success notification
                                 setNotification('正解！ +1ポイント')
                                 setTimeout(() => setNotification(null), 2000)
-                                
-                                // Play animation for correct answer
-                                if (chestEntity && currentChestId) {
-                                    await chestEntity.playOpenAnimation()
-                                    // Chest will be removed by onChestDisappear event
-                                }
+                                // Animation will be handled by chest:opened event
                             } else {
                                 // Wrong answer or other error
                                 if (result.cooldown) {

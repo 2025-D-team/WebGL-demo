@@ -36,6 +36,7 @@ export interface MultiplayerCallbacks {
     onChestAppear?: (chests: ChestData[]) => void
     onChestDisappear?: (chestIds: string[]) => void
     onChestUpdate?: (chest: ChestData) => void
+    onChestOpened?: (data: { chestId: string }) => void
     onChestInteractResult?: (result: { success: boolean; chestId?: string; reason?: string; message?: string }) => void
     onChestQuestion?: (data: { chestId: string; question: string; timeLimit: number }) => void
     onChestAnswerResult?: (result: { success: boolean; message?: string; cooldown?: number; reason?: string }) => void
@@ -175,6 +176,12 @@ export class MultiplayerManager {
             this.callbacks.onChestTimeout?.(data)
         })
 
+        // Chest opened event (for animation)
+        this.socket.on('chest:opened', (data: { chestId: string }) => {
+            console.log('📦 Chest opened:', data.chestId)
+            this.callbacks.onChestOpened?.(data)
+        })
+
         // Answer result
         this.socket.on(
             'chest:answer_result',
@@ -253,10 +260,10 @@ export class MultiplayerManager {
     // Submit answer to chest question via REST API
     async submitAnswer(chestId: string, answer: string): Promise<void> {
         if (!this.connected || !this.localPlayerId) return
-        
+
         try {
             console.log('📝 Submitting answer for chest:', chestId, 'Answer:', answer)
-            
+
             const serverUrl = GameConfig.multiplayer.serverUrl
             const response = await fetch(`${serverUrl}/api/chest/answer`, {
                 method: 'POST',
@@ -271,7 +278,7 @@ export class MultiplayerManager {
             })
 
             const result = await response.json()
-            
+
             // Trigger callback with API result
             this.callbacks.onChestAnswerResult?.(result)
         } catch (err) {
