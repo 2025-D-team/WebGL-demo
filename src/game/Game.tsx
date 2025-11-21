@@ -4,9 +4,10 @@ import * as PIXI from 'pixi.js'
 
 import { GameConfig } from '../config/gameConfig'
 import { Character } from './Character'
+import { ChestEntity } from './ChestEntity'
 import { CollisionManager } from './CollisionManager'
 import { InputHandler } from './InputHandler'
-import { MultiplayerManager, type PlayerData } from './MultiplayerManager'
+import { type ChestData, MultiplayerManager, type PlayerData } from './MultiplayerManager'
 import { RemotePlayer } from './RemotePlayer'
 import { TiledMapLoader } from './TiledMapLoader'
 
@@ -18,7 +19,12 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
     const mapContainerRef = useRef<PIXI.Container | null>(null)
     const multiplayerRef = useRef<MultiplayerManager | null>(null)
     const remotePlayersRef = useRef<Map<string, RemotePlayer>>(new Map())
+    const chestsRef = useRef<Map<string, ChestEntity>>(new Map())
+    const nearbyChestRef = useRef<string | null>(null)
     const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+    const [nearbyChest, setNearbyChest] = useState<string | null>(null)
+    const [nearbyChestPos, setNearbyChestPos] = useState<{ x: number; y: number } | null>(null)
+    const [notification, setNotification] = useState<string | null>(null)
 
     const selectEmoji = (emoji: string) => {
         // Show locally immediately
@@ -101,6 +107,15 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 const inputHandler = new InputHandler()
                 inputHandlerRef.current = inputHandler
 
+                // Register F key interaction handler
+                inputHandler.onInteract(() => {
+                    // Get closest chest from state
+                    if (nearbyChestRef.current && multiplayerRef.current) {
+                        console.log('🎯 Interacting with chest:', nearbyChestRef.current)
+                        multiplayerRef.current.interactWithChest(nearbyChestRef.current)
+                    }
+                })
+
                 // Initialize multiplayer
                 if (GameConfig.multiplayer.enabled && mapContainer && !multiplayerRef.current) {
                     const multiplayer = new MultiplayerManager({
@@ -152,6 +167,80 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             } else {
                                 const remote = remotePlayersRef.current.get(data.id)
                                 if (remote) remote.showEmoji(data.emoji, data.duration)
+                            }
+                        },
+                        onInitialChests: (chests: ChestData[]) => {
+                            // Receive initial visible chests from server on connect
+                            console.log('📦 Initial chests:', chests)
+                            for (const chest of chests) {
+                                if (!chestsRef.current.has(chest.id)) {
+                                    const chestEntity = new ChestEntity({
+                                        id: chest.id,
+                                        x: chest.x,
+                                        y: chest.y,
+                                    })
+                                    if (mapContainer) mapContainer.addChild(chestEntity.getContainer())
+                                    chestsRef.current.set(chest.id, chestEntity)
+                                }
+                            }
+                        },
+                        onChestAppear: (chests: ChestData[]) => {
+                            // New chests appeared in visibility range
+                            for (const chest of chests) {
+                                console.log('👁️ Chest appeared:', chest.id)
+                                if (!chestsRef.current.has(chest.id)) {
+                                    const chestEntity = new ChestEntity({
+                                        id: chest.id,
+                                        x: chest.x,
+                                        y: chest.y,
+                                    })
+                                    if (mapContainer) mapContainer.addChild(chestEntity.getContainer())
+                                    chestsRef.current.set(chest.id, chestEntity)
+                                }
+                            }
+                        },
+                        onChestDisappear: (chestIds: string[]) => {
+                            // Chests disappeared (opened or out of range)
+                            for (const chestId of chestIds) {
+                                console.log('👋 Chest disappeared:', chestId)
+                                const chestEntity = chestsRef.current.get(chestId)
+                                if (chestEntity) {
+                                    // Check if chest is currently opening (don't remove yet)
+                                    // The onChestInteractResult will handle removal after animation
+                                    if (!chestEntity.isOpeningAnimation) {
+                                        if (mapContainer) mapContainer.removeChild(chestEntity.getContainer())
+                                        chestEntity.destroy()
+                                        chestsRef.current.delete(chestId)
+                                        // Clear nearby hint if this was the nearby chest
+                                        if (nearbyChest === chestId) {
+                                            setNearbyChest(null)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        onChestInteractResult: async (result) => {
+                            if (result.success && result.chestId) {
+                                // Show notification immediately
+                                setNotification('Chest opened!')
+                                setTimeout(() => setNotification(null), 2000)
+
+                                const chestEntity = chestsRef.current.get(result.chestId)
+                                if (chestEntity) {
+                                    // Play animation (3 seconds total)
+                                    await chestEntity.playOpenAnimation()
+                                    // Remove chest after animation completes
+                                    if (mapContainer) mapContainer.removeChild(chestEntity.getContainer())
+                                    chestEntity.destroy()
+                                    chestsRef.current.delete(result.chestId)
+
+                                    // Clear nearby hint
+                                    if (nearbyChest === result.chestId) {
+                                        setNearbyChest(null)
+                                    }
+                                }
+                            } else {
+                                console.log('❌ Failed to open chest:', result.reason || result.message)
                             }
                         },
                     })
@@ -238,6 +327,34 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
 
                     mapContainer.x = Math.max(minCameraX, Math.min(mapContainer.x, maxCameraX))
                     mapContainer.y = Math.max(minCameraY, Math.min(mapContainer.y, maxCameraY))
+
+                    // Check distance to all visible chests for interaction hint
+                    const R2 = 48 // Interaction radius (increased to match 1.5x chest scale)
+                    let closestChest: string | null = null
+                    let closestDist = Infinity
+
+                    for (const [chestId, chestEntity] of chestsRef.current.entries()) {
+                        const chestPos = chestEntity.getPosition()
+                        const dx = charPos.x - chestPos.x
+                        const dy = charPos.y - chestPos.y
+                        const dist = Math.sqrt(dx * dx + dy * dy)
+
+                        if (dist <= R2 && dist < closestDist) {
+                            closestDist = dist
+                            closestChest = chestId
+                        }
+                    }
+
+                    setNearbyChest(closestChest)
+                    if (closestChest) {
+                        const chestEntity = chestsRef.current.get(closestChest)
+                        if (chestEntity) {
+                            setNearbyChestPos(chestEntity.getPosition())
+                        }
+                    } else {
+                        setNearbyChestPos(null)
+                    }
+                    nearbyChestRef.current = closestChest
                 })
             } catch (error) {
                 console.error('Failed to load game:', error)
@@ -265,6 +382,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 appRef.current = null
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [playerName])
 
     // Emoji list for picker
@@ -389,6 +507,60 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                     </div>
                 )}
             </div>
+
+            {/* Chest interaction hint */}
+            {nearbyChest &&
+                nearbyChestPos &&
+                mapContainerRef.current &&
+                (() => {
+                    const chestScreenX = nearbyChestPos.x + mapContainerRef.current.x
+                    const chestScreenY = nearbyChestPos.y + mapContainerRef.current.y
+                    return (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: chestScreenY - 30,
+                                left: chestScreenX + 35,
+                                background: 'rgba(0, 0, 0, 0.8)',
+                                color: 'white',
+                                padding: '6px 12px',
+                                borderRadius: 6,
+                                fontSize: 13,
+                                fontWeight: '600',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                                zIndex: 9999,
+                                pointerEvents: 'none',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            Press <span style={{ color: '#ffd700' }}>F</span> to interact
+                        </div>
+                    )
+                })()}
+
+            {/* Success notification popup */}
+            {notification && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 20,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        color: '#333',
+                        padding: '8px 16px',
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: '500',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                        zIndex: 10000,
+                        pointerEvents: 'none',
+                        border: '1px solid rgba(0, 0, 0, 0.1)',
+                    }}
+                >
+                    ✓ {notification}
+                </div>
+            )}
         </div>
     )
 }

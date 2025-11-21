@@ -11,12 +11,25 @@ export interface PlayerData {
     isMoving?: boolean
 }
 
+export interface ChestData {
+    id: string
+    x: number
+    y: number
+    state: string
+    solverId?: string | null
+}
+
 export interface MultiplayerCallbacks {
     onPlayerJoined?: (player: PlayerData) => void
     onPlayerMoved?: (player: PlayerData) => void
     onPlayerLeft?: (playerId: string) => void
     onPlayerUpdated?: (player: PlayerData) => void
     onPlayerEmoji?: (data: { id: string; emoji: string; duration: number }) => void
+    onInitialChests?: (chests: ChestData[]) => void
+    onChestAppear?: (chests: ChestData[]) => void
+    onChestDisappear?: (chestIds: string[]) => void
+    onChestUpdate?: (chest: ChestData) => void
+    onChestInteractResult?: (result: { success: boolean; chestId?: string; reason?: string; message?: string }) => void
 }
 
 export class MultiplayerManager {
@@ -72,7 +85,7 @@ export class MultiplayerManager {
         })
 
         // Initialize player on server
-        this.socket.on('game:init', (data: { playerId: string; players: PlayerData[] }) => {
+        this.socket.on('game:init', (data: { playerId: string; players: PlayerData[]; chests?: ChestData[] }) => {
             console.log('✅ Game initialized, received', data.players.length, 'existing players')
             // Load existing players
             data.players.forEach((player) => {
@@ -80,6 +93,12 @@ export class MultiplayerManager {
                     this.callbacks.onPlayerJoined?.(player)
                 }
             })
+
+            // Load initial chests
+            if (data.chests && data.chests.length > 0) {
+                console.log('📦 Received', data.chests.length, 'visible chests')
+                this.callbacks.onInitialChests?.(data.chests)
+            }
         })
 
         // Player events (using colon format to match server)
@@ -106,6 +125,27 @@ export class MultiplayerManager {
         this.socket.on('player:left', (data: { id: string }) => {
             console.log('Player left:', data.id)
             this.callbacks.onPlayerLeft?.(data.id)
+        })
+
+        // Chest visibility events
+        this.socket.on('entity:appear', (data: { chests: ChestData[] }) => {
+            console.log('📦 Chests appeared:', data.chests.length)
+            this.callbacks.onChestAppear?.(data.chests)
+        })
+
+        this.socket.on('entity:disappear', (data: { chestIds: string[] }) => {
+            console.log('📦 Chests disappeared:', data.chestIds.length)
+            this.callbacks.onChestDisappear?.(data.chestIds)
+        })
+
+        this.socket.on('entity:update', (data: { chest: ChestData }) => {
+            console.log('📦 Chest updated:', data.chest.id, data.chest.state)
+            this.callbacks.onChestUpdate?.(data.chest)
+        })
+
+        // Chest interaction result
+        this.socket.on('chest:interact_result', (result) => {
+            this.callbacks.onChestInteractResult?.(result)
         })
     }
 
@@ -154,6 +194,17 @@ export class MultiplayerManager {
             this.socket.emit('player:emoji', { emoji, duration })
         } catch (err) {
             console.warn('Failed to send emoji', err)
+        }
+    }
+
+    // Send chest interaction request
+    interactWithChest(chestId: string): void {
+        if (!this.connected || !this.socket) return
+        try {
+            console.log('🎯 Requesting interaction with chest:', chestId)
+            this.socket.emit('chest:interact', { chestId })
+        } catch (err) {
+            console.warn('Failed to interact with chest', err)
         }
     }
 }

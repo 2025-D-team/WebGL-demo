@@ -7,7 +7,7 @@
 export const GameConfig = {
     // Character Settings
     character: {
-        speed: 400, // pixels per second (framerate independent)
+        speed: 800, // pixels per second (framerate independent)
         size: 32, // character hitbox size (matches tile size)
         animationSpeed: 0.2, // animation playback speed
     },

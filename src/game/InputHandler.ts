@@ -12,6 +12,7 @@ export class InputHandler {
         ['KeyD', 'right'],
         ['ArrowRight', 'right'],
     ])
+    private interactCallback: (() => void) | null = null
 
     constructor() {
         this.setupEventListeners()
@@ -24,6 +25,12 @@ export class InputHandler {
                 e.preventDefault()
                 this.keys.add(e.code)
             }
+
+            // Handle F key for interaction
+            if (e.code === 'KeyF' && this.interactCallback) {
+                e.preventDefault()
+                this.interactCallback()
+            }
         })
 
         window.addEventListener('keyup', (e) => {
@@ -33,6 +40,11 @@ export class InputHandler {
                 this.keys.delete(e.code)
             }
         })
+    }
+
+    // Set callback for F key press
+    onInteract(callback: () => void) {
+        this.interactCallback = callback
     }
 
     getDirection(): Direction | null {
