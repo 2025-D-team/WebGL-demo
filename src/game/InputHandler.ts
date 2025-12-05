@@ -51,6 +51,11 @@ export class InputHandler {
             this.keys.clear()
         })
 
+        // Clear all keys when window is resized
+        window.addEventListener('resize', () => {
+            this.keys.clear()
+        })
+
         // Clear all keys when page visibility changes (tab switch)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {

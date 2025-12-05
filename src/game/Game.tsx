@@ -33,6 +33,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         question: string
         timeLimit: number
     } | null>(null)
+    const [, forceUpdate] = useState(0) // For forcing re-render on resize
 
     const selectEmoji = (emoji: string) => {
         // Show locally immediately
@@ -43,23 +44,27 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
     }
 
     useEffect(() => {
-        // Local copies for cleanup closure (avoid ref-value changed warnings)
+        // Flag to prevent operations after unmount (StrictMode runs effect twice)
+        let isMounted = true
         let localMultiplayer: MultiplayerManager | null = null
         const remotePlayers = remotePlayersRef.current
 
-        const initGame = async () => {
-            if (!canvasRef.current || appRef.current) return
+        // Create PixiJS application
+        const app = new PIXI.Application()
 
-            // Create PixiJS application
-            const app = new PIXI.Application()
-            await app.init({
-                width: window.innerWidth,
-                height: window.innerHeight,
-                backgroundColor: GameConfig.renderer.backgroundColor,
-                antialias: GameConfig.renderer.antialias,
-                resolution: GameConfig.renderer.resolution,
-                autoDensity: GameConfig.renderer.autoDensity,
-            })
+        app.init({
+            width: window.innerWidth,
+            height: window.innerHeight,
+            backgroundColor: GameConfig.renderer.backgroundColor,
+            antialias: GameConfig.renderer.antialias,
+            resolution: GameConfig.renderer.resolution,
+            autoDensity: GameConfig.renderer.autoDensity,
+        }).then(async () => {
+            // Check if component was unmounted during init
+            if (!isMounted || !canvasRef.current) {
+                app.destroy(true, { children: true })
+                return
+            }
 
             appRef.current = app
             canvasRef.current.appendChild(app.canvas)
@@ -422,12 +427,23 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
             } catch (error) {
                 console.error('Failed to load game:', error)
             }
-        }
+        })
 
-        initGame()
+        // Handle window resize
+        const handleResize = () => {
+            if (appRef.current) {
+                appRef.current.renderer.resize(window.innerWidth, window.innerHeight)
+                // Force re-render to update UI positions
+                forceUpdate((n) => n + 1)
+            }
+        }
+        window.addEventListener('resize', handleResize)
 
         // Cleanup
         return () => {
+            isMounted = false
+            // Remove resize listener
+            window.removeEventListener('resize', handleResize)
             // Disconnect multiplayer (use captured localMultiplayer)
             if (localMultiplayer) {
                 localMultiplayer.disconnect()
