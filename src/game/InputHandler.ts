@@ -40,6 +40,23 @@ export class InputHandler {
                 this.keys.delete(e.code)
             }
         })
+
+        // Clear all keys when context menu appears (right-click)
+        window.addEventListener('contextmenu', () => {
+            this.keys.clear()
+        })
+
+        // Clear all keys when window loses focus
+        window.addEventListener('blur', () => {
+            this.keys.clear()
+        })
+
+        // Clear all keys when page visibility changes (tab switch)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.keys.clear()
+            }
+        })
     }
 
     // Set callback for F key press

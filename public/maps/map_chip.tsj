@@ -8,32 +8,6 @@
  "tilecount":1992,
  "tiledversion":"1.11.2",
  "tileheight":32,
- "tiles":[
-        {
-         "id":105,
-         "objectgroup":
-            {
-             "draworder":"index",
-             "name":"",
-             "objects":[
-                    {
-                     "height":30.8099156578559,
-                     "id":1,
-                     "name":"",
-                     "rotation":0,
-                     "type":"",
-                     "visible":true,
-                     "width":32.0936621435999,
-                     "x":0,
-                     "y":0.256749297148799
-                    }],
-             "opacity":1,
-             "type":"objectgroup",
-             "visible":true,
-             "x":0,
-             "y":0
-            }
-        }],
  "tilewidth":32,
  "type":"tileset",
  "version":"1.10"
