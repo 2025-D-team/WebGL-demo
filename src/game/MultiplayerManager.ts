@@ -32,6 +32,7 @@ export interface MultiplayerCallbacks {
     onPlayerLeft?: (playerId: string) => void
     onPlayerUpdated?: (player: PlayerData) => void
     onPlayerEmoji?: (data: { id: string; emoji: string; duration: number }) => void
+    onPlayerStatus?: (data: { id: string; status: 'idle' | 'busy' }) => void
     onInitialChests?: (chests: ChestData[]) => void
     onChestAppear?: (chests: ChestData[]) => void
     onChestDisappear?: (chestIds: string[]) => void
@@ -136,6 +137,12 @@ export class MultiplayerManager {
         // Player emoji events
         this.socket.on('player:emoji', (data: { id: string; emoji: string; duration: number }) => {
             this.callbacks.onPlayerEmoji?.(data)
+        })
+
+        // Player status events (busy/idle)
+        this.socket.on('player:status', (data: { id: string; status: 'idle' | 'busy' }) => {
+            console.log('👤 Player status changed:', data.id, data.status)
+            this.callbacks.onPlayerStatus?.(data)
         })
 
         this.socket.on('player:left', (data: { id: string }) => {
@@ -254,6 +261,17 @@ export class MultiplayerManager {
             this.socket.emit('chest:interact', { chestId })
         } catch (err) {
             console.warn('Failed to interact with chest', err)
+        }
+    }
+
+    // Cancel solving a chest question
+    cancelSolving(chestId: string): void {
+        if (!this.connected || !this.socket) return
+        try {
+            console.log('❌ Canceling solving chest:', chestId)
+            this.socket.emit('chest:cancel', { chestId })
+        } catch (err) {
+            console.warn('Failed to cancel solving', err)
         }
     }
 

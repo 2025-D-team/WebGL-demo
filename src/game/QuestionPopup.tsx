@@ -4,10 +4,10 @@ interface QuestionPopupProps {
     question: string
     timeLimit: number
     onSubmit: (answer: string) => void
-    onClose: () => void
+    onCancel: () => void // Called when user cancels (click outside or cancel button)
 }
 
-export const QuestionPopup = ({ question, timeLimit, onSubmit, onClose }: QuestionPopupProps) => {
+export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel }: QuestionPopupProps) => {
     const [answer, setAnswer] = useState('')
     const [timeLeft, setTimeLeft] = useState(timeLimit)
 
@@ -21,7 +21,7 @@ export const QuestionPopup = ({ question, timeLimit, onSubmit, onClose }: Questi
                 const newTime = prev - 100
                 if (newTime <= 100) {
                     clearInterval(interval)
-                    onClose() // Auto close when time expires
+                    // Don't call onCancel here - timeout is handled by backend
                     return 0
                 }
                 return newTime
@@ -58,7 +58,7 @@ export const QuestionPopup = ({ question, timeLimit, onSubmit, onClose }: Questi
                 justifyContent: 'center',
                 zIndex: 10001,
             }}
-            onClick={onClose}
+            onClick={onCancel}
         >
             <div
                 style={{
@@ -187,7 +187,7 @@ export const QuestionPopup = ({ question, timeLimit, onSubmit, onClose }: Questi
                     >
                         <button
                             type='button'
-                            onClick={onClose}
+                            onClick={onCancel}
                             style={{
                                 flex: 1,
                                 padding: '12px',

@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js'
 
 import { GameConfig } from '../config/gameConfig'
+import { LoadingIndicator } from './LoadingIndicator'
 
 export class RemotePlayer {
     private container: PIXI.Container
@@ -11,12 +12,18 @@ export class RemotePlayer {
     private nameBgTexts: PIXI.Text[] = []
     private isMoving: boolean = false
     private emojiText: PIXI.Text | null = null
+    private loadingIndicator: LoadingIndicator
 
     constructor(playerId: string, x: number, y: number, name?: string) {
         this.playerId = playerId
         this.container = new PIXI.Container()
         this.container.x = x
         this.container.y = y
+
+        // Initialize loading indicator
+        this.loadingIndicator = new LoadingIndicator()
+        this.loadingIndicator.setPosition(0, -GameConfig.character.size - 30)
+        this.container.addChild(this.loadingIndicator.getContainer())
 
         // Add player name label using simple bg copies for a clear outline + white foreground
         const displayName = name && name.trim().length > 0 ? name.trim() : `Player ${playerId.slice(0, 6)}`
@@ -51,6 +58,14 @@ export class RemotePlayer {
         const display = name && name.trim().length > 0 ? name.trim() : `Player ${this.playerId.slice(0, 6)}`
         this.nameText.text = display
         this.nameBgTexts.forEach((t: PIXI.Text) => (t.text = display))
+    }
+
+    setStatus(status: 'idle' | 'busy') {
+        if (status === 'busy') {
+            this.loadingIndicator.show()
+        } else {
+            this.loadingIndicator.hide()
+        }
     }
 
     showEmoji(emoji: string, duration = 2000) {

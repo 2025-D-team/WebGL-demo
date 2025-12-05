@@ -95,15 +95,15 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 const collisionObjects = mapLoader.getCollisionObjects()
                 collisionManager.loadFromTiledObjects(collisionObjects)
 
-                // 🟥 DEBUG: Visualize collision boxes
-                const debugGraphics = new PIXI.Graphics()
-                for (const rect of collisionManager.getCollisionRects()) {
-                    debugGraphics.rect(rect.x, rect.y, rect.width, rect.height)
-                }
-                debugGraphics.stroke({ width: 2, color: 0xff0000 }) // Red outline
-                debugGraphics.alpha = 0.5
-                mapContainer.addChild(debugGraphics)
-                console.log('🟥 Debug: Drew collision boxes')
+                // // 🟥 DEBUG: Visualize collision boxes
+                // const debugGraphics = new PIXI.Graphics()
+                // for (const rect of collisionManager.getCollisionRects()) {
+                //     debugGraphics.rect(rect.x, rect.y, rect.width, rect.height)
+                // }
+                // debugGraphics.stroke({ width: 2, color: 0xff0000 }) // Red outline
+                // debugGraphics.alpha = 0.5
+                // mapContainer.addChild(debugGraphics)
+                // console.log('🟥 Debug: Drew collision boxes')
 
                 // Initialize input handler
                 const inputHandler = new InputHandler()
@@ -185,6 +185,17 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             } else {
                                 const remote = remotePlayersRef.current.get(data.id)
                                 if (remote) remote.showEmoji(data.emoji, data.duration)
+                            }
+                        },
+                        onPlayerStatus: (data) => {
+                            // Update status for remote or local players
+                            const localId = multiplayerRef.current?.getLocalPlayerId()
+                            if (data.id === localId) {
+                                // Update local character status
+                                if (characterRef.current) characterRef.current.setStatus(data.status)
+                            } else {
+                                const remote = remotePlayersRef.current.get(data.id)
+                                if (remote) remote.setStatus(data.status)
                             }
                         },
                         onInitialChests: (chests: ChestData[]) => {
@@ -323,8 +334,11 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                     // Get delta time in seconds (framerate independent movement)
                     const deltaTime = ticker.deltaMS / 1000
 
-                    // Get input direction
-                    const direction = inputHandler.getDirection()
+                    // Block movement when player is busy (solving questions, etc.)
+                    const isBusy = characterRef.current.isBusy()
+
+                    // Get input direction (null if busy)
+                    const direction = isBusy ? null : inputHandler.getDirection()
                     const isMoving = direction !== null
 
                     // Move character (with map bounds and collision check)
@@ -627,7 +641,13 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             multiplayerRef.current.submitAnswer(questionData.chestId, answer)
                         }
                     }}
-                    onClose={() => setQuestionData(null)}
+                    onCancel={() => {
+                        // Cancel solving on backend
+                        if (multiplayerRef.current && questionData) {
+                            multiplayerRef.current.cancelSolving(questionData.chestId)
+                        }
+                        setQuestionData(null)
+                    }}
                 />
             )}
         </div>

@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js'
 
 import { GameConfig } from '../config/gameConfig'
+import { LoadingIndicator } from './LoadingIndicator'
 
 type Direction = 'down' | 'up' | 'left' | 'right'
 
@@ -18,12 +19,19 @@ export class Character {
     private nameText: PIXI.Text | null = null
     private nameBgTexts: PIXI.Text[] = []
     private emojiText: PIXI.Text | null = null
+    private loadingIndicator: LoadingIndicator
+    private status: 'idle' | 'busy' = 'idle'
 
     constructor(x: number, y: number, name?: string) {
         this.container = new PIXI.Container()
         this.position = { x, y }
         this.container.x = x
         this.container.y = y
+
+        // Initialize loading indicator
+        this.loadingIndicator = new LoadingIndicator()
+        this.loadingIndicator.setPosition(0, -GameConfig.character.size - 30)
+        this.container.addChild(this.loadingIndicator.getContainer())
 
         if (name !== undefined) {
             const display = name && name.trim().length > 0 ? name.trim() : ''
@@ -61,6 +69,19 @@ export class Character {
         const display = name && name.trim().length > 0 ? name.trim() : ''
         this.nameText.text = display
         this.nameBgTexts.forEach((t: PIXI.Text) => (t.text = display))
+    }
+
+    setStatus(status: 'idle' | 'busy') {
+        this.status = status
+        if (status === 'busy') {
+            this.loadingIndicator.show()
+        } else {
+            this.loadingIndicator.hide()
+        }
+    }
+
+    isBusy(): boolean {
+        return this.status === 'busy'
     }
 
     showEmoji(emoji: string, duration = 2000) {
