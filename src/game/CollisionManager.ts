@@ -12,18 +12,17 @@ export class CollisionManager {
 
     /**
      * Load collision objects from Tiled Object Layer
+     * All objects from objectgroup layers are treated as collision walls
      */
     loadFromTiledObjects(objects: TiledObject[]) {
-        this.collisionRects = objects
-            .filter((obj) => obj.type === 'collision' || obj.name === 'collision')
-            .map((obj) => ({
-                x: obj.x,
-                y: obj.y,
-                width: obj.width,
-                height: obj.height,
-            }))
+        this.collisionRects = objects.map((obj) => ({
+            x: obj.x,
+            y: obj.y,
+            width: obj.width,
+            height: obj.height,
+        }))
 
-        console.log(`Loaded ${this.collisionRects.length} collision objects`)
+        console.log(`Loaded ${this.collisionRects.length} collision objects from objectgroup layers`)
     }
 
     /**

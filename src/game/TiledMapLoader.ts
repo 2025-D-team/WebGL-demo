@@ -101,9 +101,6 @@ export class TiledMapLoader {
                     sprite.y = y
                     layerContainer.addChild(sprite)
                 }
-
-                // Check if this tile has collision property
-                this.checkTileCollision(gid, tilesets, x, y, tilewidth, tileheight)
             }
 
             this.container.addChild(layerContainer)
@@ -155,79 +152,18 @@ export class TiledMapLoader {
     private loadCollisionObjects() {
         if (!this.mapData) return
 
-        // Find all Object Layers
+        // Find all Object Layers - all objectgroup layers are walls
         for (const layer of this.mapData.layers) {
             if (layer.type === 'objectgroup' && layer.objects) {
-                // Filter collision objects (by type or name)
-                const collisions = layer.objects.filter(
-                    (obj) => obj.type === 'collision' || obj.name.toLowerCase().includes('collision')
-                )
-
-                this.collisionObjects.push(...collisions)
+                // Add all objects from objectgroup layers as collision objects
+                this.collisionObjects.push(...layer.objects)
+                console.log(`Loaded ${layer.objects.length} collision objects from layer: ${layer.name}`)
             }
         }
     }
 
-    private checkTileCollision(
-        gid: number,
-        tilesets: TiledMap['tilesets'],
-        x: number,
-        y: number,
-        tileWidth: number,
-        tileHeight: number
-    ) {
-        // Find the tileset for this GID
-        let tileset = tilesets[0]
-        for (const ts of tilesets) {
-            if (gid >= ts.firstgid) {
-                tileset = ts
-            } else {
-                break
-            }
-        }
-
-        if (!tileset.tiles) return
-
-        // Get local tile ID
-        const localId = gid - tileset.firstgid
-
-        // Find tile data
-        const tileData = tileset.tiles.find((t) => t.id === localId)
-        if (!tileData) return
-
-        // Check for collides property
-        const collidesProperty = tileData.properties?.find((p) => p.name === 'collides' && p.value === true)
-
-        if (collidesProperty) {
-            // Create collision object for this tile
-            const collisionObj: TiledObject = {
-                id: this.collisionObjects.length + 1,
-                name: `tile_collision_${gid}`,
-                type: 'collision',
-                x: x,
-                y: y,
-                width: tileWidth,
-                height: tileHeight,
-                visible: true,
-            }
-
-            this.collisionObjects.push(collisionObj)
-        }
-
-        // Also check for objectgroup (tile-level collision shapes)
-        if (tileData.objectgroup?.objects) {
-            for (const obj of tileData.objectgroup.objects) {
-                const collisionObj: TiledObject = {
-                    ...obj,
-                    x: x + obj.x, // Offset by tile position
-                    y: y + obj.y,
-                    type: obj.type || 'collision',
-                }
-
-                this.collisionObjects.push(collisionObj)
-            }
-        }
-    }
+    // REMOVED: No longer using tile-based collision detection from TSJ files
+    // Now using only objectgroup layers from TMJ file for collision detection
 
     getContainer(): PIXI.Container {
         return this.container
