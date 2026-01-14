@@ -278,9 +278,8 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                     localMultiplayer = multiplayer
                 }
 
-                // Initial camera position - center on map
-                mapContainer.x = window.innerWidth / 2 - mapDimensionsRef.current.width / 2
-                mapContainer.y = window.innerHeight / 2 - mapDimensionsRef.current.height / 2
+                // Don't center camera here - wait for character spawn
+                // Camera will be centered when onGameInit receives player position
             } catch (error) {
                 console.error('Failed to load game:', error)
             }
@@ -367,6 +366,8 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                     justifyContent: 'center',
                     alignItems: 'center',
                     overflow: 'hidden',
+                    opacity: characterReady ? 1 : 0,
+                    transition: 'opacity 0.3s ease-in',
                 }}
             />
 
