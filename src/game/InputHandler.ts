@@ -13,6 +13,7 @@ export class InputHandler {
         ['ArrowRight', 'right'],
     ])
     private interactCallback: (() => void) | null = null
+    private disabled: boolean = false
 
     constructor() {
         this.setupEventListeners()
@@ -20,6 +21,11 @@ export class InputHandler {
 
     private setupEventListeners() {
         window.addEventListener('keydown', (e) => {
+            // Ignore all input when disabled (question popup is showing)
+            if (this.disabled) {
+                return
+            }
+
             const direction = this.directionMap.get(e.code)
             if (direction) {
                 e.preventDefault()
@@ -69,7 +75,21 @@ export class InputHandler {
         this.interactCallback = callback
     }
 
+    // Enable/disable input (used when popup is showing)
+    setDisabled(disabled: boolean) {
+        this.disabled = disabled
+        if (disabled) {
+            // Clear all keys when disabling
+            this.keys.clear()
+        }
+    }
+
     getDirection(): Direction | null {
+        // Return null when disabled (question popup is showing)
+        if (this.disabled) {
+            return null
+        }
+
         // Priority: Up > Down > Left > Right
         // Only one direction at a time (no diagonal movement)
 

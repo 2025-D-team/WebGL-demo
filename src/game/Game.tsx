@@ -102,22 +102,35 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                         onGameInit: async (initData) => {
                             const localPlayerData = initData.players.find((p) => p.id === initData.playerId)
                             if (localPlayerData && !characterRef.current) {
-                                console.log('🎮 Creating character at server position:', localPlayerData.x, localPlayerData.y)
-                                const character = new CharacterModule.Character(localPlayerData.x, localPlayerData.y, playerName)
+                                console.log(
+                                    '🎮 Creating character at server position:',
+                                    localPlayerData.x,
+                                    localPlayerData.y
+                                )
+                                const character = new CharacterModule.Character(
+                                    localPlayerData.x,
+                                    localPlayerData.y,
+                                    playerName
+                                )
                                 await character.init()
                                 characterRef.current = character
                                 mapContainer.addChild(character.getContainer())
-                                
+
                                 // Center camera on character immediately
                                 mapContainer.x = window.innerWidth / 2 - localPlayerData.x
                                 mapContainer.y = window.innerHeight / 2 - localPlayerData.y
-                                
+
                                 setCharacterReady(true)
                             }
                         },
                         onPlayerJoined: async (player) => {
                             console.log('🎮 Remote player joined:', player.id)
-                            const remotePlayer = new RemotePlayerModule.RemotePlayer(player.id, player.x, player.y, player.name)
+                            const remotePlayer = new RemotePlayerModule.RemotePlayer(
+                                player.id,
+                                player.x,
+                                player.y,
+                                player.name
+                            )
                             await remotePlayer.init()
                             mapContainer.addChild(remotePlayer.getContainer())
                             remotePlayersRef.current.set(player.id, remotePlayer)
@@ -125,7 +138,12 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                         onPlayerMoved: (player) => {
                             const remotePlayer = remotePlayersRef.current.get(player.id)
                             if (remotePlayer) {
-                                remotePlayer.updatePosition(player.x, player.y, player.direction, player.isMoving ?? true)
+                                remotePlayer.updatePosition(
+                                    player.x,
+                                    player.y,
+                                    player.direction,
+                                    player.isMoving ?? true
+                                )
                             }
                         },
                         onPlayerLeft: (playerId) => {
@@ -289,6 +307,13 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isInitialized, playerName])
+
+    // Disable input when question popup is showing
+    useEffect(() => {
+        if (inputHandlerRef.current) {
+            inputHandlerRef.current.setDisabled(questionData !== null)
+        }
+    }, [questionData])
 
     // Initialize game loop (only after character is ready)
     useGameLoop({

@@ -22,7 +22,7 @@ export class CollisionManager {
             height: obj.height,
         }))
 
-        console.log(`Loaded ${this.collisionRects.length} collision objects from objectgroup layers`)
+        // console.log(`Loaded ${this.collisionRects.length} collision objects from objectgroup layers`)
     }
 
     /**
