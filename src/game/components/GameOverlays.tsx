@@ -15,6 +15,7 @@ interface GameOverlaysProps {
         question: string
         timeLimit: number
     } | null
+    isGrading: boolean
     onSubmitAnswer: (answer: string) => void
     onCancelQuestion: () => void
 }
@@ -29,6 +30,7 @@ export const GameOverlays = ({
     ranking,
     localPlayerId,
     questionData,
+    isGrading,
     onSubmitAnswer,
     onCancelQuestion,
 }: GameOverlaysProps) => {
@@ -75,6 +77,7 @@ export const GameOverlays = ({
                 <QuestionPopup
                     question={questionData.question}
                     timeLimit={questionData.timeLimit}
+                    isGrading={isGrading}
                     onSubmit={onSubmitAnswer}
                     onCancel={onCancelQuestion}
                 />

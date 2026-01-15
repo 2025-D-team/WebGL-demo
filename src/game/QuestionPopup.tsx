@@ -5,6 +5,7 @@ interface QuestionPopupProps {
     timeLimit: number
     onSubmit: (answer: string) => void
     onCancel: () => void // Called when user cancels (click outside or cancel button)
+    isGrading?: boolean
 }
 
 interface QuestionData {
@@ -16,7 +17,7 @@ interface QuestionData {
     hints: string[]
 }
 
-export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel }: QuestionPopupProps) => {
+export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel, isGrading = false }: QuestionPopupProps) => {
     const [answer, setAnswer] = useState('')
     const [timeLeft, setTimeLeft] = useState(timeLimit)
 
@@ -372,7 +373,7 @@ export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel }: Quest
                                 </button>
                                 <button
                                     type='submit'
-                                    disabled={!answer.trim()}
+                                    disabled={!answer.trim() || isGrading}
                                     style={{
                                         flex: 1,
                                         padding: '14px',
@@ -381,15 +382,15 @@ export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel }: Quest
                                         border: 'none',
                                         borderRadius: 8,
                                         background:
-                                            answer.trim() ?
+                                            answer.trim() && !isGrading ?
                                                 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                                             :   '#ddd',
                                         color: 'white',
-                                        cursor: answer.trim() ? 'pointer' : 'not-allowed',
+                                        cursor: answer.trim() && !isGrading ? 'pointer' : 'not-allowed',
                                         transition: 'all 0.2s',
                                     }}
                                     onMouseEnter={(e) => {
-                                        if (answer.trim()) {
+                                        if (answer.trim() && !isGrading) {
                                             e.currentTarget.style.transform = 'translateY(-2px)'
                                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
                                         }
@@ -399,12 +400,69 @@ export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel }: Quest
                                         e.currentTarget.style.boxShadow = 'none'
                                     }}
                                 >
-                                    ✅ 提出する
+                                    {isGrading ? '🤖 採点中...' : '✅ 提出する'}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
+                
+                {/* Grading Overlay */}
+                {isGrading && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 20,
+                            zIndex: 10,
+                        }}
+                    >
+                        <div
+                            style={{
+                                background: 'white',
+                                padding: '40px 60px',
+                                borderRadius: 16,
+                                textAlign: 'center',
+                                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    fontSize: 48,
+                                    marginBottom: 16,
+                                    animation: 'bounce 1s infinite',
+                                }}
+                            >
+                                🤖
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: 24,
+                                    fontWeight: 'bold',
+                                    color: '#667eea',
+                                    marginBottom: 8,
+                                }}
+                            >
+                                採点中...
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: 14,
+                                    color: '#666',
+                                }}
+                            >
+                                AIがコードを評価しています
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

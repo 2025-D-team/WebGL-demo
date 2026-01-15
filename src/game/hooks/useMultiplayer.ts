@@ -19,6 +19,7 @@ interface UseMultiplayerOptions {
     setQuestionData: (data: { chestId: string; question: string; timeLimit: number } | null) => void
     setNotification: (message: string | null) => void
     setRanking: (ranking: RankingPlayer[]) => void
+    setGradingStatus: (isGrading: boolean) => void
 }
 
 /**
@@ -37,6 +38,7 @@ export const useMultiplayer = ({
     setQuestionData,
     setNotification,
     setRanking,
+    setGradingStatus,
 }: UseMultiplayerOptions) => {
     const handleGameInit = useCallback(
         async (initData: { playerId: string; players: PlayerData[] }) => {
@@ -230,8 +232,19 @@ export const useMultiplayer = ({
         [chestsRef]
     )
 
+    const handleChestGrading = useCallback(
+        (data: { chestId: string }) => {
+            console.log('🤖 AI is grading answer for chest:', data.chestId)
+            setGradingStatus(true)
+        },
+        [setGradingStatus]
+    )
+
     const handleChestAnswerResult = useCallback(
         async (result: { success: boolean; cooldown?: number; message?: string; reason?: string }) => {
+            // Stop grading status
+            setGradingStatus(false)
+            
             // Close question popup
             setQuestionData(null)
 
@@ -254,7 +267,7 @@ export const useMultiplayer = ({
                 }
             }
         },
-        [setQuestionData, setNotification]
+        [setQuestionData, setNotification, setGradingStatus]
     )
 
     const handleChestInteractResult = useCallback(
@@ -291,6 +304,7 @@ export const useMultiplayer = ({
             onChestAppear: handleChestAppear,
             onChestDisappear: handleChestDisappear,
             onChestQuestion: handleChestQuestion,
+            onChestGrading: handleChestGrading,
             onChestTimeout: handleChestTimeout,
             onChestOpened: handleChestOpened,
             onChestAnswerResult: handleChestAnswerResult,

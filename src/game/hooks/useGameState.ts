@@ -39,6 +39,7 @@ export const useGameState = () => {
         question: string
         timeLimit: number
     } | null>(null)
+    const [isGrading, setIsGrading] = useState(false)
 
     // Game ready state
     const [characterReady, setCharacterReady] = useState(false)
@@ -66,6 +67,8 @@ export const useGameState = () => {
         setRanking,
         questionData,
         setQuestionData,
+        isGrading,
+        setIsGrading,
         characterReady,
         setCharacterReady,
     }

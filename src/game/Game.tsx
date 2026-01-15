@@ -36,6 +36,8 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         setRanking,
         questionData,
         setQuestionData,
+        isGrading,
+        setIsGrading,
         characterReady,
         setCharacterReady,
     } = useGameState()
@@ -232,8 +234,13 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                 timeLimit: data.timeLimit,
                             })
                         },
+                        onChestGrading: (data) => {
+                            console.log('🤖 AI is grading answer for chest:', data.chestId)
+                            setIsGrading(true)
+                        },
                         onChestTimeout: (data) => {
                             setQuestionData(null)
+                            setIsGrading(false)
                             setNotification(data.message || 'タイムアウトしました')
                             setTimeout(() => setNotification(null), 2000)
                         },
@@ -245,6 +252,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             }
                         },
                         onChestAnswerResult: async (result) => {
+                            setIsGrading(false)
                             setQuestionData(null)
                             if (result.success) {
                                 setNotification('正解！ +1ポイント')
@@ -385,6 +393,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 ranking={ranking}
                 localPlayerId={multiplayerRef.current?.getLocalPlayerId() || null}
                 questionData={questionData}
+                isGrading={isGrading}
                 onSubmitAnswer={handleSubmitAnswer}
                 onCancelQuestion={handleCancelQuestion}
             />

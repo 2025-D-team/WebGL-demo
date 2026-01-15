@@ -40,6 +40,7 @@ export interface MultiplayerCallbacks {
     onChestOpened?: (data: { chestId: string }) => void
     onChestInteractResult?: (result: { success: boolean; chestId?: string; reason?: string; message?: string }) => void
     onChestQuestion?: (data: { chestId: string; question: string; timeLimit: number }) => void
+    onChestGrading?: (data: { chestId: string }) => void
     onChestAnswerResult?: (result: { success: boolean; message?: string; cooldown?: number; reason?: string }) => void
     onChestTimeout?: (data: { chestId: string; message: string }) => void
     onRankingUpdate?: (ranking: RankingPlayer[]) => void
@@ -175,6 +176,12 @@ export class MultiplayerManager {
         this.socket.on('chest:question', (data: { chestId: string; question: string; timeLimit: number }) => {
             console.log('❓ Received question for chest:', data.chestId)
             this.callbacks.onChestQuestion?.(data)
+        })
+
+        // Chest grading status (AI is checking answer)
+        this.socket.on('chest:grading', (data: { chestId: string }) => {
+            console.log('🤖 AI grading answer for chest:', data.chestId)
+            this.callbacks.onChestGrading?.(data)
         })
 
         // Chest timeout event
