@@ -13,6 +13,10 @@ export class ChestEntity {
     private x: number
     private y: number
     private isOpening = false
+    private chestType: string // 'gold', 'wood', 'rare', or 'nomal'
+
+    // Available chest types with their folder paths
+    private static readonly CHEST_TYPES = ['gold', 'wood', 'rare', 'nomal']
 
     constructor(data: ChestData) {
         this.chestId = data.id
@@ -22,13 +26,17 @@ export class ChestEntity {
         this.container.x = data.x
         this.container.y = data.y
 
+        // Randomly select a chest type
+        this.chestType = ChestEntity.CHEST_TYPES[Math.floor(Math.random() * ChestEntity.CHEST_TYPES.length)]
+
         // Load closed chest sprite
         this.loadClosedSprite()
     }
 
     private async loadClosedSprite() {
         try {
-            const texture = await PIXI.Assets.load('/chest/chest_wood.png')
+            const chestName = this.chestType === 'nomal' ? 'normal' : this.chestType
+            const texture = await PIXI.Assets.load(`/chest/${this.chestType}/chest_${chestName}.png`)
             this.sprite = new PIXI.Sprite(texture)
             this.sprite.anchor.set(0.5, 0.5)
             this.sprite.scale.set(1.5, 1.5) // Scale to 1.5x
@@ -58,8 +66,9 @@ export class ChestEntity {
         this.isOpening = true
 
         try {
-            // Load and switch to open sprite
-            const openTexture = await PIXI.Assets.load('/chest/chest_wood-open.png')
+            // Load and switch to open sprite (matching the chest type)
+            const chestName = this.chestType === 'nomal' ? 'normal' : this.chestType
+            const openTexture = await PIXI.Assets.load(`/chest/${this.chestType}/chest_${chestName}-open.png`)
 
             if (this.sprite) {
                 this.sprite.texture = openTexture
