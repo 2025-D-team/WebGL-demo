@@ -273,6 +273,21 @@
             background: rgba(229, 62, 62, 0.1);
         }
 
+        &.defeated {
+            opacity: 0.6;
+            background: rgba(26, 32, 44, 0.3);
+            border-left: 3px solid #e53e3e;
+
+            .boss-name {
+                color: #a0aec0;
+                text-decoration: line-through;
+            }
+
+            .boss-hp {
+                color: #e53e3e;
+            }
+        }
+
         .boss-info {
             display: flex;
             flex-direction: column;

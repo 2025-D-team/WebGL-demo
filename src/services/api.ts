@@ -294,6 +294,14 @@ export const adminBossAPI = {
     },
 
     /**
+     * Reset a defeated boss (restore full HP)
+     */
+    resetBoss: async (id: number) => {
+        const response = await api.post(`/api/admin/boss-spawns/${id}/reset`)
+        return response.data
+    },
+
+    /**
      * Generate questions using AI for boss creation
      * Returns array of questions with title, description, difficulty, hints, expectedAnswer
      */

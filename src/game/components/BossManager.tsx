@@ -20,6 +20,8 @@ interface BossSpawn {
     boss_name: string
     sprite_name?: string
     max_hp: number
+    current_hp: number
+    boss_status: string
     is_active: boolean
 }
 
@@ -45,29 +47,62 @@ export const BossManager = () => {
         // Only render active spawns
         const activeSpawns = spawns.filter((s) => s.is_active)
 
-        for (const spawn of activeSpawns) {
-            try {
-                const texture = await PIXI.Assets.load(BOSS_SPRITE_PATH)
-                const sprite = new PIXI.Sprite(texture)
-                sprite.label = 'boss-marker'
-                sprite.anchor.set(0.5, 0.5)
-                // Scale down from 400x400 to ~48px marker size (like chest markers)
-                const markerSize = 48
-                const scale = markerSize / texture.width
-                sprite.scale.set(scale)
-                sprite.position.set(spawn.x, spawn.y)
-                mapView.addChild(sprite)
-            } catch {
-                // Fallback to red circle
-                const fallback = new PIXI.Graphics()
-                fallback.label = 'boss-marker'
-                fallback.circle(0, 0, 14)
-                fallback.fill({ color: 0xe53e3e, alpha: 0.9 })
-                fallback.stroke({ width: 3, color: 0xffffff, alpha: 0.8 })
-                fallback.position.set(spawn.x, spawn.y)
-                mapView.addChild(fallback)
-            }
-        }
+                for (const spawn of activeSpawns) {
+                    try {
+                        const texture = await PIXI.Assets.load(BOSS_SPRITE_PATH)
+                        const sprite = new PIXI.Sprite(texture)
+                        sprite.label = 'boss-marker'
+                        sprite.anchor.set(0.5, 0.5)
+                        // Scale down from 400x400 to ~48px marker size (like chest markers)
+                        const markerSize = 48
+                        const scale = markerSize / texture.width
+                        sprite.scale.set(scale)
+                        sprite.position.set(spawn.x, spawn.y)
+                        mapView.addChild(sprite)
+
+                        // If boss is defeated, tint sprite and add a semi-transparent gray overlay
+                        if (spawn.boss_status === 'completed') {
+                            try {
+                                sprite.tint = 0x888888
+                                sprite.alpha = 0.85
+
+                                const overlay = new PIXI.Graphics()
+                                overlay.label = 'boss-marker-overlay'
+                                // draw at original texture size and scale to match sprite
+                                overlay.beginFill(0x000000, 0.45)
+                                overlay.drawCircle(0, 0, texture.width / 2)
+                                overlay.endFill()
+                                overlay.position.set(spawn.x, spawn.y)
+                                overlay.scale.set(scale)
+                                overlay.zIndex = sprite.zIndex + 1
+                                mapView.addChild(overlay)
+                            } catch (e) {
+                                // non-fatal
+                                console.warn('Failed to add boss defeated overlay', e)
+                            }
+                        }
+                    } catch {
+                        // Fallback to red circle
+                        const fallback = new PIXI.Graphics()
+                        fallback.label = 'boss-marker'
+                        fallback.circle(0, 0, 14)
+                        fallback.fill({ color: 0xe53e3e, alpha: 0.9 })
+                        fallback.stroke({ width: 3, color: 0xffffff, alpha: 0.8 })
+                        fallback.position.set(spawn.x, spawn.y)
+                        mapView.addChild(fallback)
+
+                        // If defeated, add gray overlay on fallback marker as well
+                        if (spawn.boss_status === 'completed') {
+                            const ov = new PIXI.Graphics()
+                            ov.label = 'boss-marker-overlay'
+                            ov.beginFill(0x000000, 0.45)
+                            ov.drawCircle(0, 0, 16)
+                            ov.endFill()
+                            ov.position.set(spawn.x, spawn.y)
+                            mapView.addChild(ov)
+                        }
+                    }
+                }
     }, [])
 
     const [isLoading, setIsLoading] = useState(true)
@@ -152,6 +187,8 @@ export const BossManager = () => {
                             boss_name: s.boss_name,
                             sprite_name: s.sprite_name,
                             max_hp: s.max_hp,
+                            current_hp: s.current_hp ?? s.max_hp,
+                            boss_status: s.boss_status || 'active',
                             is_active: s.is_active,
                         }))
                         setSavedSpawns(spawnData)
@@ -319,6 +356,31 @@ export const BossManager = () => {
         }
     }
 
+    const handleResetBoss = async (spawnId: number) => {
+        if (!confirm('このボスをリセットしますか？（HPが全回復します）')) return
+
+        try {
+            const result = await adminBossAPI.resetBoss(spawnId)
+            if (result.success) {
+                // Update local state
+                setSavedSpawns((prev) =>
+                    prev.map((s) => (s.id === spawnId ? { ...s, current_hp: s.max_hp, boss_status: 'active' } : s))
+                )
+
+                // Notify connected players
+                try {
+                    await adminBossAPI.reloadBosses()
+                    console.log('📡 Boss reload broadcast sent after reset')
+                } catch (reloadErr) {
+                    console.warn('Failed to reload bosses for players:', reloadErr)
+                }
+            }
+        } catch (error) {
+            console.error('Failed to reset boss:', error)
+            alert('ボスのリセットに失敗しました')
+        }
+    }
+
     const handleSaveBoss = async (data: BossFormData) => {
         setIsSaving(true)
         try {
@@ -339,6 +401,8 @@ export const BossManager = () => {
                     boss_name: result.spawn.boss_name,
                     sprite_name: result.spawn.sprite_name,
                     max_hp: result.spawn.max_hp,
+                    current_hp: result.spawn.max_hp,
+                    boss_status: 'active',
                     is_active: true,
                 }
 
@@ -420,6 +484,12 @@ export const BossManager = () => {
                     <span className='control-label'>👹 ボス:</span>
                     <span className='control-value'>{savedSpawns.filter((s) => s.is_active).length}体</span>
                 </div>
+                <div className='control-group'>
+                    <span className='control-label'>💀 撃破:</span>
+                    <span className='control-value'>
+                        {savedSpawns.filter((s) => s.boss_status === 'completed').length}体
+                    </span>
+                </div>
                 {isPlacingMode && (
                     <div className='placing-hint'>
                         <span>📍</span>
@@ -439,22 +509,67 @@ export const BossManager = () => {
                         {savedSpawns.map((spawn) => (
                             <li
                                 key={spawn.id}
-                                className='boss-list-item'
+                                className={`boss-list-item${spawn.boss_status === 'completed' ? ' defeated' : ''}`}
                             >
                                 <div className='boss-info'>
-                                    <span className='boss-name'>{spawn.boss_name}</span>
+                                    <span className='boss-name'>
+                                        {spawn.boss_status === 'completed' ? '💀 ' : '👹 '}
+                                        {spawn.boss_name}
+                                    </span>
                                     <span className='boss-pos'>
                                         ({spawn.x}, {spawn.y})
                                     </span>
-                                    <span className='boss-hp'>HP: {spawn.max_hp}</span>
+                                    <span className='boss-hp'>
+                                        HP: {spawn.current_hp}/{spawn.max_hp}
+                                        {spawn.boss_status === 'completed' && (
+                                            <span style={{ color: '#e53e3e', marginLeft: 6 }}>撃破済</span>
+                                        )}
+                                    </span>
+                                    {spawn.max_hp > 0 && (
+                                        <div
+                                            style={{
+                                                width: '100%',
+                                                height: 4,
+                                                background: '#333',
+                                                borderRadius: 2,
+                                                marginTop: 4,
+                                                overflow: 'hidden',
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    width: `${Math.max(0, (spawn.current_hp / spawn.max_hp) * 100)}%`,
+                                                    height: '100%',
+                                                    background:
+                                                        spawn.current_hp / spawn.max_hp > 0.5 ? '#48bb78'
+                                                        : spawn.current_hp / spawn.max_hp > 0.25 ? '#ed8936'
+                                                        : '#e53e3e',
+                                                    borderRadius: 2,
+                                                    transition: 'width 0.3s',
+                                                }}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
-                                <button
-                                    className='btn-delete-spawn'
-                                    onClick={() => handleDeleteSpawn(spawn.id)}
-                                    title='削除'
-                                >
-                                    🗑️
-                                </button>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                    {spawn.boss_status === 'completed' && (
+                                        <button
+                                            className='btn-delete-spawn'
+                                            onClick={() => handleResetBoss(spawn.id)}
+                                            title='リセット（HP全回復）'
+                                            style={{ color: '#48bb78' }}
+                                        >
+                                            🔄
+                                        </button>
+                                    )}
+                                    <button
+                                        className='btn-delete-spawn'
+                                        onClick={() => handleDeleteSpawn(spawn.id)}
+                                        title='削除'
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
                             </li>
                         ))}
                     </ul>

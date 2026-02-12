@@ -44,6 +44,7 @@ export interface MultiplayerCallbacks {
             y: number
             name: string
             maxHp: number
+            currentHp?: number
             timeLimitSeconds: number
             templateId: number
         }>
@@ -66,7 +67,14 @@ export interface MultiplayerCallbacks {
         scoreEarned?: number
         damage?: number
     }) => void
-    onBossDamaged?: (data: { bossSpawnId: number; damage: number; attackerId: string; attackerName: string }) => void
+    onBossDamaged?: (data: {
+        bossSpawnId: number
+        damage: number
+        currentHp: number
+        defeated: boolean
+        attackerId: string
+        attackerName: string
+    }) => void
 }
 
 export class MultiplayerManager {
@@ -269,8 +277,15 @@ export class MultiplayerManager {
 
         this.socket.on(
             'boss:damaged',
-            (data: { bossSpawnId: number; damage: number; attackerId: string; attackerName: string }) => {
-                console.log('⚔️ Boss damaged:', data.bossSpawnId, 'by', data.damage)
+            (data: {
+                bossSpawnId: number
+                damage: number
+                currentHp: number
+                defeated: boolean
+                attackerId: string
+                attackerName: string
+            }) => {
+                console.log('⚔️ Boss damaged:', data.bossSpawnId, 'by', data.damage, 'HP:', data.currentHp)
                 this.callbacks.onBossDamaged?.(data)
             }
         )

@@ -298,12 +298,14 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                         onBossDamaged: async (data) => {
                             const bossEntity = bossesRef.current.get(data.bossSpawnId)
                             if (bossEntity) {
-                                const newHp = bossEntity.getHp() - data.damage
-                                bossEntity.setHp(newHp)
-                                console.log(`⚔️ Boss ${data.bossSpawnId} took ${data.damage} damage, HP: ${newHp}`)
+                                // Use server-authoritative HP
+                                bossEntity.setHp(data.currentHp)
+                                console.log(
+                                    `⚔️ Boss ${data.bossSpawnId} took ${data.damage} damage, HP: ${data.currentHp}`
+                                )
 
                                 // Boss died — play death animation and remove
-                                if (newHp <= 0) {
+                                if (data.defeated) {
                                     console.log(`💀 Boss ${data.bossSpawnId} defeated!`)
                                     await bossEntity.playDeathAnimation()
                                     mapContainer.removeChild(bossEntity.getContainer())

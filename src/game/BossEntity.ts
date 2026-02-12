@@ -12,6 +12,7 @@ export interface BossSpawnData {
     y: number
     name: string
     maxHp: number
+    currentHp?: number
     timeLimitSeconds: number
     templateId: number
 }
@@ -34,7 +35,7 @@ export class BossEntity {
 
     constructor(data: BossSpawnData) {
         this.bossData = data
-        this.currentHp = data.maxHp
+        this.currentHp = data.currentHp ?? data.maxHp
         this.container = new PIXI.Container()
         this.container.x = data.x
         this.container.y = data.y
