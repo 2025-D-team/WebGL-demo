@@ -47,62 +47,62 @@ export const BossManager = () => {
         // Only render active spawns
         const activeSpawns = spawns.filter((s) => s.is_active)
 
-                for (const spawn of activeSpawns) {
+        for (const spawn of activeSpawns) {
+            try {
+                const texture = await PIXI.Assets.load(BOSS_SPRITE_PATH)
+                const sprite = new PIXI.Sprite(texture)
+                sprite.label = 'boss-marker'
+                sprite.anchor.set(0.5, 0.5)
+                // Scale down from 400x400 to ~48px marker size (like chest markers)
+                const markerSize = 48
+                const scale = markerSize / texture.width
+                sprite.scale.set(scale)
+                sprite.position.set(spawn.x, spawn.y)
+                mapView.addChild(sprite)
+
+                // If boss is defeated, tint sprite and add a semi-transparent gray overlay
+                if (spawn.boss_status === 'completed') {
                     try {
-                        const texture = await PIXI.Assets.load(BOSS_SPRITE_PATH)
-                        const sprite = new PIXI.Sprite(texture)
-                        sprite.label = 'boss-marker'
-                        sprite.anchor.set(0.5, 0.5)
-                        // Scale down from 400x400 to ~48px marker size (like chest markers)
-                        const markerSize = 48
-                        const scale = markerSize / texture.width
-                        sprite.scale.set(scale)
-                        sprite.position.set(spawn.x, spawn.y)
-                        mapView.addChild(sprite)
+                        sprite.tint = 0x888888
+                        sprite.alpha = 0.85
 
-                        // If boss is defeated, tint sprite and add a semi-transparent gray overlay
-                        if (spawn.boss_status === 'completed') {
-                            try {
-                                sprite.tint = 0x888888
-                                sprite.alpha = 0.85
-
-                                const overlay = new PIXI.Graphics()
-                                overlay.label = 'boss-marker-overlay'
-                                // draw at original texture size and scale to match sprite
-                                overlay.beginFill(0x000000, 0.45)
-                                overlay.drawCircle(0, 0, texture.width / 2)
-                                overlay.endFill()
-                                overlay.position.set(spawn.x, spawn.y)
-                                overlay.scale.set(scale)
-                                overlay.zIndex = sprite.zIndex + 1
-                                mapView.addChild(overlay)
-                            } catch (e) {
-                                // non-fatal
-                                console.warn('Failed to add boss defeated overlay', e)
-                            }
-                        }
-                    } catch {
-                        // Fallback to red circle
-                        const fallback = new PIXI.Graphics()
-                        fallback.label = 'boss-marker'
-                        fallback.circle(0, 0, 14)
-                        fallback.fill({ color: 0xe53e3e, alpha: 0.9 })
-                        fallback.stroke({ width: 3, color: 0xffffff, alpha: 0.8 })
-                        fallback.position.set(spawn.x, spawn.y)
-                        mapView.addChild(fallback)
-
-                        // If defeated, add gray overlay on fallback marker as well
-                        if (spawn.boss_status === 'completed') {
-                            const ov = new PIXI.Graphics()
-                            ov.label = 'boss-marker-overlay'
-                            ov.beginFill(0x000000, 0.45)
-                            ov.drawCircle(0, 0, 16)
-                            ov.endFill()
-                            ov.position.set(spawn.x, spawn.y)
-                            mapView.addChild(ov)
-                        }
+                        const overlay = new PIXI.Graphics()
+                        overlay.label = 'boss-marker-overlay'
+                        // draw at original texture size and scale to match sprite
+                        overlay.beginFill(0x000000, 0.45)
+                        overlay.drawCircle(0, 0, texture.width / 2)
+                        overlay.endFill()
+                        overlay.position.set(spawn.x, spawn.y)
+                        overlay.scale.set(scale)
+                        overlay.zIndex = sprite.zIndex + 1
+                        mapView.addChild(overlay)
+                    } catch (e) {
+                        // non-fatal
+                        console.warn('Failed to add boss defeated overlay', e)
                     }
                 }
+            } catch {
+                // Fallback to red circle
+                const fallback = new PIXI.Graphics()
+                fallback.label = 'boss-marker'
+                fallback.circle(0, 0, 14)
+                fallback.fill({ color: 0xe53e3e, alpha: 0.9 })
+                fallback.stroke({ width: 3, color: 0xffffff, alpha: 0.8 })
+                fallback.position.set(spawn.x, spawn.y)
+                mapView.addChild(fallback)
+
+                // If defeated, add gray overlay on fallback marker as well
+                if (spawn.boss_status === 'completed') {
+                    const ov = new PIXI.Graphics()
+                    ov.label = 'boss-marker-overlay'
+                    ov.beginFill(0x000000, 0.45)
+                    ov.drawCircle(0, 0, 16)
+                    ov.endFill()
+                    ov.position.set(spawn.x, spawn.y)
+                    mapView.addChild(ov)
+                }
+            }
+        }
     }, [])
 
     const [isLoading, setIsLoading] = useState(true)
@@ -362,10 +362,14 @@ export const BossManager = () => {
         try {
             const result = await adminBossAPI.resetBoss(spawnId)
             if (result.success) {
-                // Update local state
-                setSavedSpawns((prev) =>
-                    prev.map((s) => (s.id === spawnId ? { ...s, current_hp: s.max_hp, boss_status: 'active' } : s))
-                )
+                // Update local state and re-render map markers immediately
+                setSavedSpawns((prev) => {
+                    const updated = prev.map((s) => (s.id === spawnId ? { ...s, current_hp: s.max_hp, boss_status: 'active' } : s))
+                    if (mapViewRef.current) {
+                        void renderBossMarkersOnMap(mapViewRef.current, updated)
+                    }
+                    return updated
+                })
 
                 // Notify connected players
                 try {
