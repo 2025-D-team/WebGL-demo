@@ -27,7 +27,19 @@ export const Login: React.FC = () => {
             const result = await login(username, password)
 
             if (result.success) {
-                navigate('/game')
+                // Get user data from localStorage (just set by login)
+                const userData = localStorage.getItem('user')
+                if (userData) {
+                    const user = JSON.parse(userData)
+                    // Redirect based on admin status
+                    if (user.isAdmin) {
+                        navigate('/admin/dashboard')
+                    } else {
+                        navigate('/game')
+                    }
+                } else {
+                    navigate('/game')
+                }
             } else {
                 setError(result.error || 'Login failed')
             }

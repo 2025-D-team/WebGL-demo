@@ -11,6 +11,7 @@ interface User {
     id: number
     username: string
     email?: string
+    isAdmin?: boolean
     totalScore?: number
     chestsOpened?: number
     bossesDefeated?: number
@@ -29,6 +30,7 @@ interface AuthContextType {
     register: (username: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>
     logout: () => void
     isAuthenticated: boolean
+    isAdmin: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -151,6 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         register,
         logout,
         isAuthenticated: !!user && !!token,
+        isAdmin: !!user && !!user.isAdmin,
     }
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
