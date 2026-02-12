@@ -2,10 +2,11 @@
  * Chest Manager Component
  * Map editor for placing chests
  */
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import * as PIXI from 'pixi.js'
 
+import { adminAPI } from '../../services/api'
 import { TiledMapLoader } from '../TiledMapLoader'
 import { ChestForm, type ChestFormData } from './ChestForm'
 import './ChestManager.scss'
@@ -18,11 +19,52 @@ interface PlacingChest {
     y: number
 }
 
+// Rarity colors for map markers (module-level constant)
+const RARITY_COLORS: Record<string, number> = {
+    wood: 0x8b4513,
+    common: 0xc0c0c0,
+    rare: 0x4169e1,
+    legendary: 0xffd700,
+}
+
 export const ChestManager = () => {
     const canvasRef = useRef<HTMLDivElement>(null)
     const appRef = useRef<PIXI.Application | null>(null)
     const mapContainerRef = useRef<PIXI.Container | null>(null)
     const mapViewRef = useRef<PIXI.Container | null>(null)
+
+    const renderChestMarkersOnMap = useCallback(
+        (mapView: PIXI.Container, chests: Array<{ id: number; x: number; y: number; rarity: string }>) => {
+            // Remove existing markers
+            const existing = mapView.children.filter((c) => c.label === 'chest-marker')
+            existing.forEach((c) => mapView.removeChild(c))
+
+            // Add new markers
+            for (const chest of chests) {
+                const marker = new PIXI.Graphics()
+                marker.label = 'chest-marker'
+
+                const color = RARITY_COLORS[chest.rarity] || 0x8b4513
+
+                // Diamond shape marker
+                marker.moveTo(0, -12)
+                marker.lineTo(10, 0)
+                marker.lineTo(0, 12)
+                marker.lineTo(-10, 0)
+                marker.closePath()
+                marker.fill({ color, alpha: 0.8 })
+                marker.stroke({ width: 2, color: 0xffffff, alpha: 0.9 })
+
+                // Center dot
+                marker.circle(0, 0, 3)
+                marker.fill({ color: 0xffffff })
+
+                marker.position.set(chest.x, chest.y)
+                mapView.addChild(marker)
+            }
+        },
+        []
+    )
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [zoom, setZoom] = useState(50) // Display zoom percentage
@@ -37,6 +79,8 @@ export const ChestManager = () => {
     const [selectedRarity, setSelectedRarity] = useState<ChestRarity | null>(null)
     const [showRarityDropdown, setShowRarityDropdown] = useState(false)
     const [placingChest, setPlacingChest] = useState<PlacingChest | null>(null)
+    const [isSaving, setIsSaving] = useState(false)
+    const [savedChests, setSavedChests] = useState<Array<{ id: number; x: number; y: number; rarity: string }>>([])
 
     // Refs for event handler closure access
     const isPlacingModeRef = useRef(false)
@@ -126,6 +170,25 @@ export const ChestManager = () => {
                 mapViewRef.current = mapView
 
                 setIsLoading(false)
+
+                // Load existing chests from DB and render markers
+                try {
+                    const result = await adminAPI.getChests()
+                    if (result.success && result.chests.length > 0) {
+                        const chestData = result.chests.map(
+                            (c: { id: number; x: number; y: number; rarity: string }) => ({
+                                id: c.id,
+                                x: c.x,
+                                y: c.y,
+                                rarity: c.rarity,
+                            })
+                        )
+                        setSavedChests(chestData)
+                        renderChestMarkersOnMap(mapView, chestData)
+                    }
+                } catch (e) {
+                    console.warn('Failed to load existing chests:', e)
+                }
 
                 // Add pan & zoom controls
                 setupPanZoom(app, mapContainer)
@@ -242,6 +305,7 @@ export const ChestManager = () => {
                 appRef.current = null
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     // Handle window resize
@@ -283,10 +347,48 @@ export const ChestManager = () => {
         setPlacingChest(null)
     }
 
-    const handleSaveChest = (data: ChestFormData) => {
-        console.log('💾 Save chest:', data)
-        // TODO: Call API to save chest
-        setPlacingChest(null)
+    const handleSaveChest = async (data: ChestFormData) => {
+        setIsSaving(true)
+        try {
+            const result = await adminAPI.createChest({
+                x: data.position.x,
+                y: data.position.y,
+                rarity: data.rarity,
+                question: data.question,
+                hints: data.hints,
+                expectedAnswer: data.expectedAnswer,
+            })
+
+            if (result.success) {
+                console.log('💾 Chest saved:', result.chest)
+                const newChest = {
+                    id: result.chest.id,
+                    x: data.position.x,
+                    y: data.position.y,
+                    rarity: data.rarity,
+                }
+
+                // Add to saved chests for map display
+                setSavedChests((prev) => {
+                    const updated = [...prev, newChest]
+                    // Re-render markers on map
+                    if (mapViewRef.current) {
+                        renderChestMarkersOnMap(mapViewRef.current, updated)
+                    }
+                    return updated
+                })
+
+                // Reload chests into game memory
+                await adminAPI.reloadChests()
+            }
+
+            setPlacingChest(null)
+        } catch (error) {
+            console.error('Failed to save chest:', error)
+            alert('宝箱の保存に失敗しました')
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     if (error) {
@@ -358,6 +460,10 @@ export const ChestManager = () => {
                     <span className='control-label'>🔍 Zoom:</span>
                     <span className='control-value'>{zoom}%</span>
                 </div>
+                <div className='control-group'>
+                    <span className='control-label'>📦 宝箱:</span>
+                    <span className='control-value'>{savedChests.length}個</span>
+                </div>
                 {isPlacingMode && (
                     <div className='placing-hint'>
                         <span>📍</span>
@@ -382,6 +488,7 @@ export const ChestManager = () => {
                     difficulty={rarityConfig[placingChest.rarity].difficulty}
                     onSave={handleSaveChest}
                     onClose={handleCloseForm}
+                    isSaving={isSaving}
                 />
             )}
         </div>

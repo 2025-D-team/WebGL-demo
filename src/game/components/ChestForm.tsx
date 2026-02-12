@@ -12,6 +12,7 @@ interface ChestFormProps {
     difficulty: string
     onSave: (data: ChestFormData) => void
     onClose: () => void
+    isSaving?: boolean
 }
 
 export interface ChestFormData {
@@ -22,7 +23,7 @@ export interface ChestFormData {
     expectedAnswer: string
 }
 
-export const ChestForm = ({ rarity, position, difficulty, onSave, onClose }: ChestFormProps) => {
+export const ChestForm = ({ rarity, position, difficulty, onSave, onClose, isSaving = false }: ChestFormProps) => {
     const [question, setQuestion] = useState('')
     const [hintInput, setHintInput] = useState('')
     const [hints, setHints] = useState<string[]>([])
@@ -190,14 +191,16 @@ export const ChestForm = ({ rarity, position, difficulty, onSave, onClose }: Che
                             type='button'
                             className='btn-cancel'
                             onClick={onClose}
+                            disabled={isSaving}
                         >
                             キャンセル
                         </button>
                         <button
                             type='submit'
                             className='btn-submit'
+                            disabled={isSaving}
                         >
-                            保存
+                            {isSaving ? '保存中...' : '保存'}
                         </button>
                     </div>
                 </form>

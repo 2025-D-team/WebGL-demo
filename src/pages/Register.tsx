@@ -2,7 +2,7 @@
  * Register Page
  * New user registration screen
  */
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext'
 import './Auth.scss'
 
 export const Register: React.FC = () => {
-    const { register } = useAuth()
+    const { register, isAuthenticated, isAdmin, loading: authLoading } = useAuth()
     const navigate = useNavigate()
 
     const [username, setUsername] = useState('')
@@ -19,6 +19,17 @@ export const Register: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+
+    // Auto-redirect if already logged in
+    useEffect(() => {
+        if (!authLoading && isAuthenticated) {
+            if (isAdmin) {
+                navigate('/admin/dashboard', { replace: true })
+            } else {
+                navigate('/game', { replace: true })
+            }
+        }
+    }, [authLoading, isAuthenticated, isAdmin, navigate])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

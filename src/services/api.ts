@@ -106,4 +106,65 @@ export const gameAPI = {
     },
 }
 
+// =====================================================
+// ADMIN API
+// =====================================================
+
+export const adminAPI = {
+    /**
+     * Get all chest spawns
+     */
+    getChests: async (mapId = 'main') => {
+        const response = await api.get(`/api/admin/chests?map=${mapId}`)
+        return response.data
+    },
+
+    /**
+     * Create a new chest spawn with question
+     */
+    createChest: async (data: {
+        x: number
+        y: number
+        rarity: string
+        question: string
+        hints: string[]
+        expectedAnswer: string
+    }) => {
+        const response = await api.post('/api/admin/chests', data)
+        return response.data
+    },
+
+    /**
+     * Update a chest spawn
+     */
+    updateChest: async (id: number, data: { x?: number; y?: number; rarity?: string; isActive?: boolean }) => {
+        const response = await api.put(`/api/admin/chests/${id}`, data)
+        return response.data
+    },
+
+    /**
+     * Delete a chest spawn
+     */
+    deleteChest: async (id: number) => {
+        const response = await api.delete(`/api/admin/chests/${id}`)
+        return response.data
+    },
+
+    /**
+     * Get chest rarities
+     */
+    getRarities: async () => {
+        const response = await api.get('/api/admin/rarities')
+        return response.data
+    },
+
+    /**
+     * Reload chests into game memory
+     */
+    reloadChests: async () => {
+        const response = await api.post('/api/admin/chests/reload')
+        return response.data
+    },
+}
+
 export default api

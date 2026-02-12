@@ -2,7 +2,7 @@
  * Login Page
  * User authentication screen
  */
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -10,13 +10,24 @@ import { useAuth } from '../context/AuthContext'
 import './Auth.scss'
 
 export const Login: React.FC = () => {
-    const { login } = useAuth()
+    const { login, isAuthenticated, isAdmin, loading: authLoading } = useAuth()
     const navigate = useNavigate()
 
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+
+    // Auto-redirect if already logged in
+    useEffect(() => {
+        if (!authLoading && isAuthenticated) {
+            if (isAdmin) {
+                navigate('/admin/dashboard', { replace: true })
+            } else {
+                navigate('/game', { replace: true })
+            }
+        }
+    }, [authLoading, isAuthenticated, isAdmin, navigate])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
