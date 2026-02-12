@@ -406,7 +406,7 @@ export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel, isGradi
                         </form>
                     </div>
                 </div>
-                
+
                 {/* Grading Overlay */}
                 {isGrading && (
                     <div

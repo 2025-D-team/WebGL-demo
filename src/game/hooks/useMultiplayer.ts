@@ -244,7 +244,7 @@ export const useMultiplayer = ({
         async (result: { success: boolean; cooldown?: number; message?: string; reason?: string }) => {
             // Stop grading status
             setGradingStatus(false)
-            
+
             // Close question popup
             setQuestionData(null)
 
