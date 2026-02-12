@@ -364,7 +364,9 @@ export const BossManager = () => {
             if (result.success) {
                 // Update local state and re-render map markers immediately
                 setSavedSpawns((prev) => {
-                    const updated = prev.map((s) => (s.id === spawnId ? { ...s, current_hp: s.max_hp, boss_status: 'active' } : s))
+                    const updated = prev.map((s) =>
+                        s.id === spawnId ? { ...s, current_hp: s.max_hp, boss_status: 'active' } : s
+                    )
                     if (mapViewRef.current) {
                         void renderBossMarkersOnMap(mapViewRef.current, updated)
                     }
