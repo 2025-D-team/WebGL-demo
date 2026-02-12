@@ -19,10 +19,20 @@ const DefaultRedirect = () => {
     if (loading) return null
 
     if (isAuthenticated) {
-        return <Navigate to={isAdmin ? '/admin/dashboard' : '/game'} replace />
+        return (
+            <Navigate
+                to={isAdmin ? '/admin/dashboard' : '/game'}
+                replace
+            />
+        )
     }
 
-    return <Navigate to='/login' replace />
+    return (
+        <Navigate
+            to='/login'
+            replace
+        />
+    )
 }
 
 function App() {
