@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import * as PIXI from 'pixi.js'
 
 import { GameConfig } from '../../config/gameConfig'
+import { BossEntity } from '../BossEntity'
 import { Character } from '../Character'
 import { ChestEntity } from '../ChestEntity'
 import { CollisionManager } from '../CollisionManager'
@@ -17,11 +18,15 @@ interface UseGameLoopOptions {
     multiplayer: MultiplayerManager | null
     collisionManager: CollisionManager
     chestsRef: React.RefObject<Map<string, ChestEntity>>
+    bossesRef: React.RefObject<Map<number, BossEntity>>
     mapWidth: number
     mapHeight: number
     setNearbyChest: (chestId: string | null) => void
     setNearbyChestPos: (pos: { x: number; y: number } | null) => void
     nearbyChestRef: React.RefObject<string | null>
+    setNearbyBoss: (bossId: number | null) => void
+    setNearbyBossPos: (pos: { x: number; y: number } | null) => void
+    nearbyBossRef: React.RefObject<number | null>
 }
 
 /**
@@ -36,11 +41,15 @@ export const useGameLoop = ({
     multiplayer,
     collisionManager,
     chestsRef,
+    bossesRef,
     mapWidth,
     mapHeight,
     setNearbyChest,
     setNearbyChestPos,
     nearbyChestRef,
+    setNearbyBoss,
+    setNearbyBossPos,
+    nearbyBossRef,
 }: UseGameLoopOptions) => {
     useEffect(() => {
         if (!app || !mapContainer || !character || !inputHandler) return
@@ -148,6 +157,34 @@ export const useGameLoop = ({
                 setNearbyChestPos(null)
             }
             nearbyChestRef.current = closestChest
+
+            // Check distance to all visible bosses for interaction hint
+            const BOSS_R = BossEntity.getInteractRadius()
+            let closestBoss: number | null = null
+            let closestBossDist = Infinity
+
+            for (const [bossId, bossEntity] of bossesRef.current?.entries() ?? []) {
+                const bossPos = bossEntity.getPosition()
+                const dx = charPos.x - bossPos.x
+                const dy = charPos.y - bossPos.y
+                const dist = Math.sqrt(dx * dx + dy * dy)
+
+                if (dist <= BOSS_R && dist < closestBossDist) {
+                    closestBossDist = dist
+                    closestBoss = bossId
+                }
+            }
+
+            setNearbyBoss(closestBoss)
+            if (closestBoss) {
+                const bossEntity = bossesRef.current?.get(closestBoss)
+                if (bossEntity) {
+                    setNearbyBossPos(bossEntity.getPosition())
+                }
+            } else {
+                setNearbyBossPos(null)
+            }
+            nearbyBossRef.current = closestBoss
         }
 
         app.ticker.add(tickerFn)
@@ -163,10 +200,14 @@ export const useGameLoop = ({
         multiplayer,
         collisionManager,
         chestsRef,
+        bossesRef,
         mapWidth,
         mapHeight,
         setNearbyChest,
         setNearbyChestPos,
         nearbyChestRef,
+        setNearbyBoss,
+        setNearbyBossPos,
+        nearbyBossRef,
     ])
 }

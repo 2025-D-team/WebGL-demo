@@ -22,12 +22,18 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         inputHandlerRef,
         remotePlayersRef,
         chestsRef,
+        bossesRef,
         multiplayerRef,
         nearbyChestRef,
+        nearbyBossRef,
         nearbyChest,
         setNearbyChest,
         nearbyChestPos,
         setNearbyChestPos,
+        nearbyBoss,
+        setNearbyBoss,
+        nearbyBossPos,
+        setNearbyBossPos,
         showEmojiPicker,
         setShowEmojiPicker,
         notification,
@@ -79,6 +85,23 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 // Load collision objects from map
                 const collisionObjects = mapLoader.getCollisionObjects()
                 collisionManagerRef.current.loadFromTiledObjects(collisionObjects)
+
+                // Load boss spawns from server and render on map
+                try {
+                    const { gameAPI } = await import('../services/api')
+                    const { BossEntity } = await import('./BossEntity')
+                    const bossResult = await gameAPI.getBossSpawns()
+                    if (bossResult.success && bossResult.bosses) {
+                        console.log(`👹 Loading ${bossResult.bosses.length} boss spawns`)
+                        for (const bossData of bossResult.bosses) {
+                            const bossEntity = new BossEntity(bossData)
+                            mapContainer.addChild(bossEntity.getContainer())
+                            bossesRef.current.set(bossData.id, bossEntity)
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to load boss spawns:', e)
+                }
 
                 // Initialize input handler
                 const { InputHandler } = await import('./InputHandler')
@@ -193,6 +216,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                         id: chest.id,
                                         x: chest.x,
                                         y: chest.y,
+                                        rarity: chest.rarity,
                                     })
                                     mapContainer.addChild(chestEntity.getContainer())
                                     chestsRef.current.set(chest.id, chestEntity)
@@ -207,6 +231,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                         id: chest.id,
                                         x: chest.x,
                                         y: chest.y,
+                                        rarity: chest.rarity,
                                     })
                                     mapContainer.addChild(chestEntity.getContainer())
                                     chestsRef.current.set(chest.id, chestEntity)
@@ -226,6 +251,23 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                     }
                                 }
                             }
+                        },
+                        onBossSpawned: async (bosses) => {
+                            // Remove existing boss entities
+                            for (const [, boss] of bossesRef.current) {
+                                mapContainer.removeChild(boss.getContainer())
+                                boss.destroy()
+                            }
+                            bossesRef.current.clear()
+
+                            // Add new boss entities
+                            const { BossEntity } = await import('./BossEntity')
+                            for (const bossData of bosses) {
+                                const bossEntity = new BossEntity(bossData)
+                                mapContainer.addChild(bossEntity.getContainer())
+                                bossesRef.current.set(bossData.id, bossEntity)
+                            }
+                            console.log(`👹 Boss spawns reloaded: ${bosses.length} bosses`)
                         },
                         onChestQuestion: (data) => {
                             setQuestionData({
@@ -331,11 +373,15 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         multiplayer: multiplayerRef.current,
         collisionManager: collisionManagerRef.current,
         chestsRef,
+        bossesRef,
         mapWidth: mapDimensionsRef.current.width,
         mapHeight: mapDimensionsRef.current.height,
         setNearbyChest,
         setNearbyChestPos,
         nearbyChestRef,
+        setNearbyBoss,
+        setNearbyBossPos,
+        nearbyBossRef,
     })
 
     // Handle emoji selection
@@ -389,6 +435,8 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
             <GameOverlays
                 nearbyChest={nearbyChest}
                 nearbyChestPos={nearbyChestPos}
+                nearbyBoss={nearbyBoss}
+                nearbyBossPos={nearbyBossPos}
                 mapContainer={mapContainerRef.current}
                 ranking={ranking}
                 localPlayerId={multiplayerRef.current?.getLocalPlayerId() || null}

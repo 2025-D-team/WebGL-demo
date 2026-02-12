@@ -104,6 +104,14 @@ export const gameAPI = {
         const response = await api.post('/api/chest/answer', { chestId, answer, playerId })
         return response.data
     },
+
+    /**
+     * Get active boss spawns for the game map
+     */
+    getBossSpawns: async (mapId = 'main') => {
+        const response = await api.get(`/api/game/boss-spawns?map=${mapId}`)
+        return response.data
+    },
 }
 
 // =====================================================
@@ -180,6 +188,126 @@ export const adminAPI = {
      */
     resetAllChests: async () => {
         const response = await api.post('/api/admin/chests/reset-all')
+        return response.data
+    },
+}
+
+// =====================================================
+// ADMIN BOSS API
+// =====================================================
+
+export const adminBossAPI = {
+    /**
+     * Get all boss templates
+     */
+    getTemplates: async () => {
+        const response = await api.get('/api/admin/boss-templates')
+        return response.data
+    },
+
+    /**
+     * Create a new boss template
+     */
+    createTemplate: async (data: {
+        name: string
+        description?: string
+        spriteName?: string
+        maxHp?: number
+        damagePerCorrect?: number
+        timeLimitSeconds?: number
+    }) => {
+        const response = await api.post('/api/admin/boss-templates', data)
+        return response.data
+    },
+
+    /**
+     * Update a boss template
+     */
+    updateTemplate: async (id: number, data: Record<string, unknown>) => {
+        const response = await api.put(`/api/admin/boss-templates/${id}`, data)
+        return response.data
+    },
+
+    /**
+     * Delete a boss template
+     */
+    deleteTemplate: async (id: number) => {
+        const response = await api.delete(`/api/admin/boss-templates/${id}`)
+        return response.data
+    },
+
+    /**
+     * Get all boss spawns for a map
+     */
+    getSpawns: async (mapId = 'main') => {
+        const response = await api.get(`/api/admin/boss-spawns?map=${mapId}`)
+        return response.data
+    },
+
+    /**
+     * Create a boss spawn (with existing template or create inline with questions)
+     * HP = questions.length * 10, damagePerCorrect = 10
+     */
+    createSpawn: async (data: {
+        x: number
+        y: number
+        bossTemplateId?: number
+        newBoss?: {
+            name: string
+            description?: string
+            timeLimitSeconds?: number
+            questions: Array<{
+                title: string
+                description: string
+                difficulty: string
+                hints: string[]
+                expectedAnswer: string
+            }>
+        }
+    }) => {
+        const response = await api.post('/api/admin/boss-spawns', data)
+        return response.data
+    },
+
+    /**
+     * Update a boss spawn
+     */
+    updateSpawn: async (id: number, data: Record<string, unknown>) => {
+        const response = await api.put(`/api/admin/boss-spawns/${id}`, data)
+        return response.data
+    },
+
+    /**
+     * Delete a boss spawn
+     */
+    deleteSpawn: async (id: number) => {
+        const response = await api.delete(`/api/admin/boss-spawns/${id}`)
+        return response.data
+    },
+
+    /**
+     * Reload boss spawns and notify all connected players
+     */
+    reloadBosses: async () => {
+        const response = await api.post('/api/admin/boss-spawns/reload')
+        return response.data
+    },
+
+    /**
+     * Generate questions using AI for boss creation
+     * Returns array of questions with title, description, difficulty, hints, expectedAnswer
+     */
+    generateQuestions: async (data: {
+        bossName: string
+        bossDescription?: string
+        difficulties: {
+            easy?: number
+            medium?: number
+            hard?: number
+            expert?: number
+        }
+    }) => {
+        const response = await api.post('/api/admin/boss-questions/generate', data)
         return response.data
     },
 }

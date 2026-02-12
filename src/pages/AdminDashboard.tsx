@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import { BossManager } from '../game/components/BossManager'
 import { ChestManager } from '../game/components/ChestManager'
 import './AdminDashboard.scss'
 
@@ -65,13 +66,11 @@ export const AdminDashboard = () => {
                     </button>
 
                     <button
-                        className='nav-item disabled'
-                        disabled
-                        title='Coming soon'
+                        className={`nav-item ${activeTab === 'bosses' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('bosses')}
                     >
                         <span className='icon'>👹</span>
                         <span className='label'>ボス管理</span>
-                        <span className='badge'>準備中</span>
                     </button>
                 </nav>
 
@@ -97,12 +96,7 @@ export const AdminDashboard = () => {
 
                 <div className='content-body'>
                     {activeTab === 'chests' && <ChestManager />}
-                    {activeTab === 'bosses' && (
-                        <div className='coming-soon'>
-                            <h2>ボス管理機能</h2>
-                            <p>この機能は開発中です</p>
-                        </div>
-                    )}
+                    {activeTab === 'bosses' && <BossManager />}
                 </div>
             </main>
         </div>

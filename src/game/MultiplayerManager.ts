@@ -37,6 +37,7 @@ export interface MultiplayerCallbacks {
     onInitialChests?: (chests: ChestData[]) => void
     onChestAppear?: (chests: ChestData[]) => void
     onChestDisappear?: (chestIds: string[]) => void
+    onBossSpawned?: (bosses: Array<{ id: number; x: number; y: number; name: string; maxHp: number; timeLimitSeconds: number; templateId: number }>) => void
     onChestUpdate?: (chest: ChestData) => void
     onChestOpened?: (data: { chestId: string }) => void
     onChestInteractResult?: (result: { success: boolean; chestId?: string; reason?: string; message?: string }) => void
@@ -161,6 +162,12 @@ export class MultiplayerManager {
         this.socket.on('entity:disappear', (data: { chestIds: string[] }) => {
             console.log('📦 Chests disappeared:', data.chestIds.length)
             this.callbacks.onChestDisappear?.(data.chestIds)
+        })
+
+        // Boss spawn events
+        this.socket.on('boss:spawned', (data: { bosses: Array<{ id: number; x: number; y: number; name: string; maxHp: number; timeLimitSeconds: number; templateId: number }> }) => {
+            console.log('👹 Boss spawns updated:', data.bosses.length)
+            this.callbacks.onBossSpawned?.(data.bosses)
         })
 
         this.socket.on('entity:update', (data: { chest: ChestData }) => {

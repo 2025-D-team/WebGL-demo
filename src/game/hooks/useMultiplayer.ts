@@ -146,6 +146,7 @@ export const useMultiplayer = ({
                         id: chest.id,
                         x: chest.x,
                         y: chest.y,
+                        rarity: chest.rarity,
                     })
                     if (mapContainer) mapContainer.addChild(chestEntity.getContainer())
                     chestsRef.current?.set(chest.id, chestEntity)
@@ -165,6 +166,7 @@ export const useMultiplayer = ({
                         id: chest.id,
                         x: chest.x,
                         y: chest.y,
+                        rarity: chest.rarity,
                     })
                     if (mapContainer) mapContainer.addChild(chestEntity.getContainer())
                     chestsRef.current?.set(chest.id, chestEntity)

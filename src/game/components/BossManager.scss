@@ -1,0 +1,313 @@
+/**
+ * Boss Manager Styles
+ * Map editor for boss spawns - similar layout to ChestManager
+ */
+
+.boss-manager {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a1a;
+}
+
+.boss-manager {
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(26, 26, 26, 0.9);
+        backdrop-filter: blur(4px);
+        z-index: 100;
+        color: white;
+
+        p {
+            margin-top: 1.6rem;
+            font-size: 1.8rem;
+            color: #cbd5e0;
+        }
+    }
+
+    .loading-spinner {
+        width: 5rem;
+        height: 5rem;
+        border: 0.4rem solid rgba(255, 255, 255, 0.1);
+        border-top-color: #e53e3e;
+        border-radius: 50%;
+        animation: bossSpin 0.8s linear infinite;
+    }
+
+    @keyframes bossSpin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .error-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #fc8181;
+
+        h3 {
+            font-size: 2.4rem;
+            margin-bottom: 0.8rem;
+        }
+
+        p {
+            font-size: 1.6rem;
+            color: #e2e8f0;
+        }
+    }
+}
+
+.boss-toolbar {
+    position: absolute;
+    top: 1.6rem;
+    left: 1.6rem;
+    z-index: 10;
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
+
+    .btn-add-boss,
+    .btn-cancel {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 1.2rem 2rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 0.2rem 0.8rem rgba(0, 0, 0, 0.2);
+
+        span {
+            font-size: 1.8rem;
+        }
+    }
+
+    .btn-add-boss {
+        background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+        color: white;
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, #c53030 0%, #9b2c2c 100%);
+            transform: translateY(-0.2rem);
+            box-shadow: 0 0.4rem 1.2rem rgba(229, 62, 62, 0.4);
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
+
+    .btn-cancel {
+        background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+        color: white;
+
+        &:hover {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            transform: translateY(-0.2rem);
+            box-shadow: 0 0.4rem 1.2rem rgba(245, 101, 101, 0.4);
+        }
+    }
+}
+
+// Reuse map-controls (same as ChestManager)
+.boss-manager {
+    .map-controls {
+        position: absolute;
+        top: 1.6rem;
+        right: 1.6rem;
+        background: rgba(45, 55, 72, 0.95);
+        backdrop-filter: blur(0.8rem);
+        padding: 1.4rem 2rem;
+        border-radius: 1.2rem;
+        box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.3);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        color: white;
+        min-width: 20rem;
+
+        .control-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.6rem;
+
+            .control-label {
+                font-size: 1.5rem;
+                color: #cbd5e0;
+            }
+
+            .control-value {
+                font-size: 1.6rem;
+                font-weight: 600;
+                color: #e53e3e;
+            }
+        }
+
+        .placing-hint {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 1rem 1.4rem;
+            background: rgba(229, 62, 62, 0.2);
+            border: 1px solid #e53e3e;
+            border-radius: 0.8rem;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #fc8181;
+            animation: bossPulse 2s ease-in-out infinite;
+
+            span {
+                font-size: 1.6rem;
+            }
+        }
+
+        .control-hint {
+            font-size: 1.3rem;
+            color: #a0aec0;
+            padding-top: 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+    }
+
+    @keyframes bossPulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.7;
+        }
+    }
+
+    .map-canvas {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    }
+}
+
+/* Boss List Panel (bottom-left) */
+.boss-list-panel {
+    position: absolute;
+    bottom: 1.6rem;
+    left: 1.6rem;
+    z-index: 10;
+    background: rgba(45, 55, 72, 0.95);
+    backdrop-filter: blur(0.8rem);
+    border-radius: 1.2rem;
+    box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.3);
+    padding: 1.4rem;
+    min-width: 26rem;
+    max-height: 30rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin: 0 0 1rem 0;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .boss-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        overflow-y: auto;
+        max-height: 22rem;
+
+        &::-webkit-scrollbar {
+            width: 0.5rem;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: #e53e3e;
+            border-radius: 0.3rem;
+        }
+    }
+
+    .boss-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.2rem;
+        background: rgba(26, 32, 44, 0.6);
+        border-radius: 0.8rem;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: rgba(229, 62, 62, 0.1);
+        }
+
+        .boss-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+
+            .boss-name {
+                font-size: 1.4rem;
+                font-weight: 600;
+                color: #fc8181;
+            }
+
+            .boss-pos {
+                font-size: 1.2rem;
+                color: #a0aec0;
+            }
+
+            .boss-hp {
+                font-size: 1.2rem;
+                color: #68d391;
+            }
+        }
+
+        .btn-delete-spawn {
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            padding: 0.4rem;
+            opacity: 0.5;
+            transition: all 0.2s ease;
+
+            &:hover {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+    }
+}
