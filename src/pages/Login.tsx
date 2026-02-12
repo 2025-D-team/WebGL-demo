@@ -55,7 +55,7 @@ export const Login: React.FC = () => {
         <div className='auth-container'>
             <div className='auth-box'>
                 <div className='auth-header'>
-                    <h1>🏆 トレジャーアカデミー</h1>
+                    <h1>トレジャーアカデミー</h1>
                     <p>アカウントにログイン</p>
                 </div>
 

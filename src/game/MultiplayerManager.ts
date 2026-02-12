@@ -15,6 +15,7 @@ export interface ChestData {
     id: string
     x: number
     y: number
+    rarity?: string // 'wood', 'common', 'rare', 'legendary'
     state: string
     solverId?: string | null
 }

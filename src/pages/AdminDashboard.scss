@@ -1,0 +1,203 @@
+/**
+ * Admin Dashboard Styles
+ */
+
+.admin-dashboard {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    background: #f7fafc;
+}
+
+.admin-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+    h2 {
+        color: white;
+        font-size: 2.4rem; // 24px
+    }
+}
+
+// Sidebar
+.admin-sidebar {
+    width: 26rem; // 260px
+    background: linear-gradient(180deg, #2d3748 0%, #1a202c 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0.4rem 0 1.2rem rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-header {
+    padding: 2rem; // 20px
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    h2 {
+        margin: 0 0 1rem 0;
+        font-size: 2rem; // 20px
+        font-weight: 600;
+    }
+
+    .admin-user {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        font-size: 1.4rem; // 14px
+
+        .admin-badge {
+            background: #48bb78;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.4rem;
+            font-size: 1.2rem; // 12px
+            font-weight: 600;
+        }
+
+        .username {
+            color: #cbd5e0;
+        }
+    }
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        padding: 1.4rem 1.6rem; // 14px 16px
+        background: transparent;
+        border: none;
+        color: #e2e8f0;
+        border-radius: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 1.5rem; // 15px
+        position: relative;
+
+        .icon {
+            font-size: 2rem; // 20px
+        }
+
+        .label {
+            flex: 1;
+            text-align: left;
+        }
+
+        .badge {
+            font-size: 1.1rem; // 11px
+            background: rgba(237, 137, 54, 0.8);
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.4rem;
+        }
+
+        &:hover:not(.disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(0.2rem);
+        }
+
+        &.active {
+            background: linear-gradient(90deg, #4299e1 0%, #667eea 100%);
+            box-shadow: 0 0.4rem 1.2rem rgba(66, 153, 225, 0.3);
+
+            &::before {
+                content: '';
+                position: absolute;
+                left: -1rem;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 0.4rem;
+                height: 60%;
+                background: white;
+                border-radius: 0 0.4rem 0.4rem 0;
+            }
+        }
+
+        &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
+}
+
+.sidebar-footer {
+    padding: 1.6rem; // 16px
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+    .logout-btn {
+        width: 100%;
+        padding: 1.2rem; // 12px
+        background: rgba(245, 101, 101, 0.2);
+        border: 1px solid rgba(245, 101, 101, 0.4);
+        color: #fc8181;
+        border-radius: 0.8rem;
+        cursor: pointer;
+        font-size: 1.4rem; // 14px
+        font-weight: 500;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.8rem;
+
+        &:hover {
+            background: rgba(245, 101, 101, 0.3);
+            border-color: rgba(245, 101, 101, 0.6);
+        }
+    }
+}
+
+// Main Content
+.admin-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.content-header {
+    padding: 2rem 3rem; // 20px 30px
+    background: white;
+    border-bottom: 2px solid #e2e8f0;
+    box-shadow: 0 0.2rem 0.8rem rgba(0, 0, 0, 0.05);
+
+    h1 {
+        margin: 0;
+        font-size: 2.8rem; // 28px
+        color: #2d3748;
+        font-weight: 600;
+    }
+}
+
+.content-body {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+    background: #f7fafc;
+}
+
+.coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #718096;
+
+    h2 {
+        font-size: 3.2rem; // 32px
+        margin-bottom: 0.8rem;
+    }
+
+    p {
+        font-size: 1.8rem; // 18px
+    }
+}

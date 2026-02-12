@@ -4,6 +4,9 @@ export interface ChestData {
     id: string
     x: number
     y: number
+    rarity?: string // 'wood', 'common', 'rare', 'legendary'
+    state?: string
+    solverId?: string | null
 }
 
 export class ChestEntity {
@@ -13,36 +16,41 @@ export class ChestEntity {
     private x: number
     private y: number
     private isOpening = false
-    private chestType: string // 'gold', 'wood', 'rare', or 'nomal'
+    private rarity: string // Chest rarity from backend
 
-    // Available chest types with their folder paths
-    private static readonly CHEST_TYPES = ['gold', 'wood', 'rare', 'nomal']
+    // Map backend rarity names to sprite folder & file prefix
+    private static readonly RARITY_SPRITE_MAP: Record<string, { folder: string; prefix: string }> = {
+        wood: { folder: 'wood', prefix: 'wood' },
+        common: { folder: 'common', prefix: 'normal' },
+        rare: { folder: 'rare', prefix: 'gold' },
+        legendary: { folder: 'legend', prefix: 'rare' },
+    }
 
     constructor(data: ChestData) {
         this.chestId = data.id
         this.x = data.x
         this.y = data.y
+        this.rarity = data.rarity || 'wood' // Default to wood if not provided
         this.container = new PIXI.Container()
         this.container.x = data.x
         this.container.y = data.y
 
-        // Randomly select a chest type
-        this.chestType = ChestEntity.CHEST_TYPES[Math.floor(Math.random() * ChestEntity.CHEST_TYPES.length)]
-
-        // Load closed chest sprite
+        // Load closed chest sprite based on rarity from backend
         this.loadClosedSprite()
     }
 
     private async loadClosedSprite() {
         try {
-            const chestName = this.chestType === 'nomal' ? 'normal' : this.chestType
-            const texture = await PIXI.Assets.load(`/chest/${this.chestType}/chest_${chestName}.png`)
+            // Get sprite folder & prefix from rarity
+            const spriteInfo = ChestEntity.RARITY_SPRITE_MAP[this.rarity] || { folder: 'wood', prefix: 'wood' }
+
+            const texture = await PIXI.Assets.load(`/chest/${spriteInfo.folder}/chest_${spriteInfo.prefix}.png`)
             this.sprite = new PIXI.Sprite(texture)
             this.sprite.anchor.set(0.5, 0.5)
             this.sprite.scale.set(1.5, 1.5) // Scale to 1.5x
             this.container.addChild(this.sprite)
         } catch (error) {
-            console.error('Failed to load chest sprite:', error)
+            console.error('Failed to load chest sprite:', error, 'rarity:', this.rarity)
             // Fallback to simple graphics
             this.drawFallbackChest()
         }
@@ -66,9 +74,11 @@ export class ChestEntity {
         this.isOpening = true
 
         try {
-            // Load and switch to open sprite (matching the chest type)
-            const chestName = this.chestType === 'nomal' ? 'normal' : this.chestType
-            const openTexture = await PIXI.Assets.load(`/chest/${this.chestType}/chest_${chestName}-open.png`)
+            // Get sprite folder & prefix from rarity
+            const spriteInfo = ChestEntity.RARITY_SPRITE_MAP[this.rarity] || { folder: 'wood', prefix: 'wood' }
+            const openTexture = await PIXI.Assets.load(
+                `/chest/${spriteInfo.folder}/chest_${spriteInfo.prefix}-open.png`
+            )
 
             if (this.sprite) {
                 this.sprite.texture = openTexture

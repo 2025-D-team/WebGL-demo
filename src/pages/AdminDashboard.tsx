@@ -1,16 +1,21 @@
 /**
  * Admin Dashboard
- * Main admin panel interface
+ * Main admin panel interface with sidebar navigation
  */
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import { ChestManager } from '../game/components/ChestManager'
+import './AdminDashboard.scss'
+
+type MenuTab = 'chests' | 'bosses'
 
 export const AdminDashboard = () => {
     const { user, isAdmin, loading, logout } = useAuth()
     const navigate = useNavigate()
+    const [activeTab, setActiveTab] = useState<MenuTab>('chests')
 
     // Redirect if not admin
     useEffect(() => {
@@ -22,16 +27,8 @@ export const AdminDashboard = () => {
     // Loading state
     if (loading) {
         return (
-            <div
-                style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    height: '100vh',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                }}
-            >
-                <h2 style={{ color: 'white' }}>読み込み中...</h2>
+            <div className='admin-loading'>
+                <h2>読み込み中...</h2>
             </div>
         )
     }
@@ -47,117 +44,67 @@ export const AdminDashboard = () => {
     }
 
     return (
-        <div
-            style={{
-                minHeight: '100vh',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                padding: '2rem',
-            }}
-        >
-            <div
-                style={{
-                    maxWidth: '1200px',
-                    margin: '0 auto',
-                    background: 'white',
-                    borderRadius: '12px',
-                    padding: '2rem',
-                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
-                }}
-            >
-                {/* Header */}
-                <div
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '2rem',
-                        paddingBottom: '1.5rem',
-                        borderBottom: '2px solid #e2e8f0',
-                    }}
-                >
-                    <div>
-                        <h1 style={{ margin: 0, color: '#2d3748', fontSize: '2rem' }}>
-                            🎮 Treasure Academy - 管理パネル
-                        </h1>
-                        <p style={{ margin: '0.5rem 0 0 0', color: '#718096' }}>
-                            ようこそ、{user.username} さん (管理者)
-                        </p>
+        <div className='admin-dashboard'>
+            {/* Sidebar */}
+            <aside className='admin-sidebar'>
+                <div className='sidebar-header'>
+                    <h2>🎮 管理パネル</h2>
+                    <div className='admin-user'>
+                        <span className='admin-badge'>Admin</span>
+                        <span className='username'>{user.username}</span>
                     </div>
+                </div>
+
+                <nav className='sidebar-nav'>
                     <button
-                        onClick={handleLogout}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: '#e53e3e',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#c53030'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#e53e3e'
-                        }}
+                        className={`nav-item ${activeTab === 'chests' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('chests')}
                     >
+                        <span className='icon'>📦</span>
+                        <span className='label'>宝箱管理</span>
+                    </button>
+
+                    <button
+                        className='nav-item disabled'
+                        disabled
+                        title='Coming soon'
+                    >
+                        <span className='icon'>👹</span>
+                        <span className='label'>ボス管理</span>
+                        <span className='badge'>準備中</span>
+                    </button>
+                </nav>
+
+                <div className='sidebar-footer'>
+                    <button
+                        className='logout-btn'
+                        onClick={handleLogout}
+                    >
+                        <span>🚪</span>
                         ログアウト
                     </button>
                 </div>
+            </aside>
 
-                {/* Content */}
-                <div
-                    style={{
-                        textAlign: 'center',
-                        padding: '4rem 2rem',
-                    }}
-                >
-                    <h2
-                        style={{
-                            fontSize: '3rem',
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                            margin: '0 0 1rem 0',
-                        }}
-                    >
-                        Hello World! 🌍
-                    </h2>
-                    <p style={{ color: '#718096', fontSize: '1.2rem', margin: 0 }}>管理機能は開発中です...</p>
-                    <p style={{ color: '#a0aec0', fontSize: '0.95rem', marginTop: '2rem' }}>
-                        Coming soon: 宝箱設定、質問管理、レイドボスシステム
-                    </p>
+            {/* Main Content */}
+            <main className='admin-content'>
+                <div className='content-header'>
+                    <h1>
+                        {activeTab === 'chests' && '📦 宝箱配置エディター'}
+                        {activeTab === 'bosses' && '👹 ボス管理'}
+                    </h1>
                 </div>
 
-                {/* Admin Info */}
-                <div
-                    style={{
-                        marginTop: '3rem',
-                        padding: '1.5rem',
-                        background: '#f7fafc',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                    }}
-                >
-                    <h3 style={{ marginTop: 0, color: '#2d3748' }}>システム情報</h3>
-                    <ul style={{ color: '#4a5568', lineHeight: '1.8' }}>
-                        <li>
-                            <strong>Admin ID:</strong> {user.id}
-                        </li>
-                        <li>
-                            <strong>Username:</strong> {user.username}
-                        </li>
-                        <li>
-                            <strong>Email:</strong> {user.email || 'N/A'}
-                        </li>
-                        <li>
-                            <strong>Admin:</strong> {user.isAdmin ? 'Yes' : 'No'}
-                        </li>
-                    </ul>
+                <div className='content-body'>
+                    {activeTab === 'chests' && <ChestManager />}
+                    {activeTab === 'bosses' && (
+                        <div className='coming-soon'>
+                            <h2>ボス管理機能</h2>
+                            <p>この機能は開発中です</p>
+                        </div>
+                    )}
                 </div>
-            </div>
+            </main>
         </div>
     )
 }
