@@ -183,6 +183,47 @@ export class BossEntity {
         this.updateHpBar()
     }
 
+    /** Get current HP */
+    getHp(): number {
+        return this.currentHp
+    }
+
+    /** Play death animation — fade out over 1.5s (similar to chest open animation) */
+    async playDeathAnimation(): Promise<void> {
+        try {
+            // Stop animation
+            if (this.sprite) {
+                this.sprite.stop()
+            }
+
+            // Flash red briefly
+            if (this.sprite) {
+                this.sprite.tint = 0xff0000
+                await new Promise((resolve) => setTimeout(resolve, 300))
+                this.sprite.tint = 0xffffff
+            }
+
+            // Fade out over 1.5 seconds
+            await new Promise<void>((resolve) => {
+                const fadeStart = Date.now()
+                const fadeDuration = 1500
+
+                const fadeInterval = setInterval(() => {
+                    const elapsed = Date.now() - fadeStart
+                    const progress = Math.min(elapsed / fadeDuration, 1)
+                    this.container.alpha = 1 - progress
+
+                    if (progress >= 1) {
+                        clearInterval(fadeInterval)
+                        resolve()
+                    }
+                }, 16) // ~60fps
+            })
+        } catch (error) {
+            console.error('Failed to play boss death animation:', error)
+        }
+    }
+
     /** Get the interaction radius for this boss */
     static getInteractRadius(): number {
         return BOSS_INTERACT_RADIUS

@@ -37,7 +37,17 @@ export interface MultiplayerCallbacks {
     onInitialChests?: (chests: ChestData[]) => void
     onChestAppear?: (chests: ChestData[]) => void
     onChestDisappear?: (chestIds: string[]) => void
-    onBossSpawned?: (bosses: Array<{ id: number; x: number; y: number; name: string; maxHp: number; timeLimitSeconds: number; templateId: number }>) => void
+    onBossSpawned?: (
+        bosses: Array<{
+            id: number
+            x: number
+            y: number
+            name: string
+            maxHp: number
+            timeLimitSeconds: number
+            templateId: number
+        }>
+    ) => void
     onChestUpdate?: (chest: ChestData) => void
     onChestOpened?: (data: { chestId: string }) => void
     onChestInteractResult?: (result: { success: boolean; chestId?: string; reason?: string; message?: string }) => void
@@ -46,6 +56,17 @@ export interface MultiplayerCallbacks {
     onChestAnswerResult?: (result: { success: boolean; message?: string; cooldown?: number; reason?: string }) => void
     onChestTimeout?: (data: { chestId: string; message: string }) => void
     onRankingUpdate?: (ranking: RankingPlayer[]) => void
+    // Boss fight callbacks
+    onBossQuestion?: (data: { bossSpawnId: number; questionId: number; question: string; timeLimit: number }) => void
+    onBossGrading?: (data: { bossSpawnId: number }) => void
+    onBossAnswerResult?: (result: {
+        success: boolean
+        message?: string
+        score?: number
+        scoreEarned?: number
+        damage?: number
+    }) => void
+    onBossDamaged?: (data: { bossSpawnId: number; damage: number; attackerId: string; attackerName: string }) => void
 }
 
 export class MultiplayerManager {
@@ -165,10 +186,23 @@ export class MultiplayerManager {
         })
 
         // Boss spawn events
-        this.socket.on('boss:spawned', (data: { bosses: Array<{ id: number; x: number; y: number; name: string; maxHp: number; timeLimitSeconds: number; templateId: number }> }) => {
-            console.log('👹 Boss spawns updated:', data.bosses.length)
-            this.callbacks.onBossSpawned?.(data.bosses)
-        })
+        this.socket.on(
+            'boss:spawned',
+            (data: {
+                bosses: Array<{
+                    id: number
+                    x: number
+                    y: number
+                    name: string
+                    maxHp: number
+                    timeLimitSeconds: number
+                    templateId: number
+                }>
+            }) => {
+                console.log('👹 Boss spawns updated:', data.bosses.length)
+                this.callbacks.onBossSpawned?.(data.bosses)
+            }
+        )
 
         this.socket.on('entity:update', (data: { chest: ChestData }) => {
             console.log('📦 Chest updated:', data.chest.id, data.chest.state)
@@ -218,6 +252,28 @@ export class MultiplayerManager {
             console.log('🏆 Ranking updated:', data.ranking.length, 'players')
             this.callbacks.onRankingUpdate?.(data.ranking)
         })
+
+        // Boss fight events
+        this.socket.on(
+            'boss:question',
+            (data: { bossSpawnId: number; questionId: number; question: string; timeLimit: number }) => {
+                console.log('👹 Received boss question for boss:', data.bossSpawnId)
+                this.callbacks.onBossQuestion?.(data)
+            }
+        )
+
+        this.socket.on('boss:grading', (data: { bossSpawnId: number }) => {
+            console.log('🤖 AI grading boss answer for:', data.bossSpawnId)
+            this.callbacks.onBossGrading?.(data)
+        })
+
+        this.socket.on(
+            'boss:damaged',
+            (data: { bossSpawnId: number; damage: number; attackerId: string; attackerName: string }) => {
+                console.log('⚔️ Boss damaged:', data.bossSpawnId, 'by', data.damage)
+                this.callbacks.onBossDamaged?.(data)
+            }
+        )
     }
 
     // Allow setting/updating the local player's name after connection
@@ -287,6 +343,58 @@ export class MultiplayerManager {
             this.socket.emit('chest:cancel', { chestId })
         } catch (err) {
             console.warn('Failed to cancel solving', err)
+        }
+    }
+
+    // Send boss interaction request
+    interactWithBoss(bossSpawnId: number): void {
+        if (!this.connected || !this.socket) return
+        try {
+            console.log('👹 Requesting boss fight:', bossSpawnId)
+            this.socket.emit('boss:interact', { bossSpawnId })
+        } catch (err) {
+            console.warn('Failed to interact with boss', err)
+        }
+    }
+
+    // Cancel boss fight
+    cancelBossFight(): void {
+        if (!this.connected || !this.socket) return
+        try {
+            console.log('❌ Canceling boss fight')
+            this.socket.emit('boss:cancel')
+        } catch (err) {
+            console.warn('Failed to cancel boss fight', err)
+        }
+    }
+
+    // Submit answer to boss question via REST API
+    async submitBossAnswer(bossSpawnId: number, questionId: number, answer: string): Promise<void> {
+        if (!this.connected || !this.localPlayerId) return
+
+        try {
+            console.log('📝 Submitting boss answer for boss:', bossSpawnId)
+
+            const serverUrl = GameConfig.multiplayer.serverUrl
+            const response = await fetch(`${serverUrl}/api/boss/answer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bossSpawnId,
+                    questionId,
+                    answer,
+                    playerId: this.localPlayerId,
+                }),
+            })
+
+            const result = await response.json()
+            this.callbacks.onBossAnswerResult?.(result)
+        } catch (err) {
+            console.warn('Failed to submit boss answer', err)
+            this.callbacks.onBossAnswerResult?.({
+                success: false,
+                message: 'ネットワークエラーが発生しました',
+            })
         }
     }
 

@@ -42,7 +42,9 @@ export const useGameState = () => {
     const [notification, setNotification] = useState<string | null>(null)
     const [ranking, setRanking] = useState<RankingPlayer[]>([])
     const [questionData, setQuestionData] = useState<{
-        chestId: string
+        chestId?: string
+        bossSpawnId?: number
+        questionId?: number
         question: string
         timeLimit: number
     } | null>(null)

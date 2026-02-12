@@ -13,7 +13,9 @@ interface GameOverlaysProps {
     ranking: RankingPlayer[]
     localPlayerId: string | null
     questionData: {
-        chestId: string
+        chestId?: string
+        bossSpawnId?: number
+        questionId?: number
         question: string
         timeLimit: number
     } | null

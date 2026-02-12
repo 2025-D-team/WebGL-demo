@@ -304,6 +304,14 @@ export const BossManager = () => {
                     }
                     return updated
                 })
+
+                // Notify connected players about boss removal
+                try {
+                    await adminBossAPI.reloadBosses()
+                    console.log('📡 Boss reload broadcast sent after delete')
+                } catch (reloadErr) {
+                    console.warn('Failed to reload bosses for players:', reloadErr)
+                }
             }
         } catch (error) {
             console.error('Failed to delete boss spawn:', error)

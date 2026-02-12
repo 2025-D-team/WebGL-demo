@@ -110,9 +110,13 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
 
                 // Register F key interaction handler
                 inputHandler.onInteract(() => {
+                    // Chest interaction takes priority
                     if (nearbyChestRef.current && multiplayerRef.current) {
                         console.log('🎯 Interacting with chest:', nearbyChestRef.current)
                         multiplayerRef.current.interactWithChest(nearbyChestRef.current)
+                    } else if (nearbyBossRef.current && multiplayerRef.current) {
+                        console.log('👹 Interacting with boss:', nearbyBossRef.current)
+                        multiplayerRef.current.interactWithBoss(nearbyBossRef.current)
                     }
                 })
 
@@ -269,6 +273,52 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             }
                             console.log(`👹 Boss spawns reloaded: ${bosses.length} bosses`)
                         },
+                        onBossQuestion: (data) => {
+                            setQuestionData({
+                                bossSpawnId: data.bossSpawnId,
+                                questionId: data.questionId,
+                                question: data.question,
+                                timeLimit: data.timeLimit,
+                            })
+                        },
+                        onBossGrading: () => {
+                            setIsGrading(true)
+                        },
+                        onBossAnswerResult: (result) => {
+                            setIsGrading(false)
+                            setQuestionData(null)
+                            if (result.success) {
+                                setNotification(result.message || `正解！ +1ポイント ⚔️ダメージ`)
+                                setTimeout(() => setNotification(null), 2500)
+                            } else {
+                                setNotification(result.message || '不正解です')
+                                setTimeout(() => setNotification(null), 2500)
+                            }
+                        },
+                        onBossDamaged: async (data) => {
+                            const bossEntity = bossesRef.current.get(data.bossSpawnId)
+                            if (bossEntity) {
+                                const newHp = bossEntity.getHp() - data.damage
+                                bossEntity.setHp(newHp)
+                                console.log(`⚔️ Boss ${data.bossSpawnId} took ${data.damage} damage, HP: ${newHp}`)
+
+                                // Boss died — play death animation and remove
+                                if (newHp <= 0) {
+                                    console.log(`💀 Boss ${data.bossSpawnId} defeated!`)
+                                    await bossEntity.playDeathAnimation()
+                                    mapContainer.removeChild(bossEntity.getContainer())
+                                    bossEntity.destroy()
+                                    bossesRef.current.delete(data.bossSpawnId)
+
+                                    // Clear nearby boss state if this was the nearby boss
+                                    if (nearbyBossRef.current === data.bossSpawnId) {
+                                        nearbyBossRef.current = null
+                                        setNearbyBoss(null)
+                                        setNearbyBossPos(null)
+                                    }
+                                }
+                            }
+                        },
                         onChestQuestion: (data) => {
                             setQuestionData({
                                 chestId: data.chestId,
@@ -393,18 +443,27 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         setShowEmojiPicker(false)
     }
 
-    // Handle question answer submission
+    // Handle question answer submission (chest or boss)
     const handleSubmitAnswer = (answer: string) => {
         if (multiplayerRef.current && questionData) {
-            multiplayerRef.current.submitAnswer(questionData.chestId, answer)
+            if (questionData.bossSpawnId && questionData.questionId) {
+                // Boss answer — via REST API
+                multiplayerRef.current.submitBossAnswer(questionData.bossSpawnId, questionData.questionId, answer)
+            } else if (questionData.chestId) {
+                // Chest answer — via REST API
+                multiplayerRef.current.submitAnswer(questionData.chestId, answer)
+            }
         }
     }
 
-    // Handle question cancel
+    // Handle question cancel (chest or boss)
     const handleCancelQuestion = () => {
-        // Cancel solving on backend
         if (multiplayerRef.current && questionData) {
-            multiplayerRef.current.cancelSolving(questionData.chestId)
+            if (questionData.bossSpawnId) {
+                multiplayerRef.current.cancelBossFight()
+            } else if (questionData.chestId) {
+                multiplayerRef.current.cancelSolving(questionData.chestId)
+            }
         }
         setQuestionData(null)
     }
