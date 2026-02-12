@@ -126,6 +126,7 @@ export const adminAPI = {
         x: number
         y: number
         rarity: string
+        title: string
         question: string
         hints: string[]
         expectedAnswer: string
@@ -163,6 +164,22 @@ export const adminAPI = {
      */
     reloadChests: async () => {
         const response = await api.post('/api/admin/chests/reload')
+        return response.data
+    },
+
+    /**
+     * Reset a single opened chest (allow respawn)
+     */
+    resetChest: async (id: number) => {
+        const response = await api.post(`/api/admin/chests/${id}/reset`)
+        return response.data
+    },
+
+    /**
+     * Reset all opened chests (allow all to respawn)
+     */
+    resetAllChests: async () => {
+        const response = await api.post('/api/admin/chests/reset-all')
         return response.data
     },
 }

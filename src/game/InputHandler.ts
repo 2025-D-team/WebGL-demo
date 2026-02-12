@@ -21,6 +21,12 @@ export class InputHandler {
 
     private setupEventListeners() {
         window.addEventListener('keydown', (e) => {
+            // Allow typing in input/textarea elements (e.g. question popup answer box)
+            const target = e.target as HTMLElement
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                return
+            }
+
             // Ignore all input when disabled (question popup is showing)
             if (this.disabled) {
                 return
@@ -40,6 +46,12 @@ export class InputHandler {
         })
 
         window.addEventListener('keyup', (e) => {
+            // Allow typing in input/textarea elements
+            const target = e.target as HTMLElement
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                return
+            }
+
             const direction = this.directionMap.get(e.code)
             if (direction) {
                 e.preventDefault()

@@ -19,12 +19,12 @@ interface PlacingChest {
     y: number
 }
 
-// Rarity colors for map markers (module-level constant)
-const RARITY_COLORS: Record<string, number> = {
-    wood: 0x8b4513,
-    common: 0xc0c0c0,
-    rare: 0x4169e1,
-    legendary: 0xffd700,
+// Rarity sprite paths (matching ChestEntity.ts RARITY_SPRITE_MAP)
+const RARITY_SPRITE: Record<string, string> = {
+    wood: '/chest/wood/chest_wood.png',
+    common: '/chest/common/chest_normal.png',
+    rare: '/chest/rare/chest_gold.png',
+    legendary: '/chest/legend/chest_rare.png',
 }
 
 export const ChestManager = () => {
@@ -34,33 +34,37 @@ export const ChestManager = () => {
     const mapViewRef = useRef<PIXI.Container | null>(null)
 
     const renderChestMarkersOnMap = useCallback(
-        (mapView: PIXI.Container, chests: Array<{ id: number; x: number; y: number; rarity: string }>) => {
+        async (
+            mapView: PIXI.Container,
+            chests: Array<{ id: number; x: number; y: number; rarity: string; is_opened?: boolean }>
+        ) => {
             // Remove existing markers
             const existing = mapView.children.filter((c) => c.label === 'chest-marker')
             existing.forEach((c) => mapView.removeChild(c))
 
-            // Add new markers
-            for (const chest of chests) {
-                const marker = new PIXI.Graphics()
-                marker.label = 'chest-marker'
+            // Only render unopened chests
+            const unopenedChests = chests.filter((c) => !c.is_opened)
 
-                const color = RARITY_COLORS[chest.rarity] || 0x8b4513
-
-                // Diamond shape marker
-                marker.moveTo(0, -12)
-                marker.lineTo(10, 0)
-                marker.lineTo(0, 12)
-                marker.lineTo(-10, 0)
-                marker.closePath()
-                marker.fill({ color, alpha: 0.8 })
-                marker.stroke({ width: 2, color: 0xffffff, alpha: 0.9 })
-
-                // Center dot
-                marker.circle(0, 0, 3)
-                marker.fill({ color: 0xffffff })
-
-                marker.position.set(chest.x, chest.y)
-                mapView.addChild(marker)
+            // Load and add sprite markers
+            for (const chest of unopenedChests) {
+                try {
+                    const spritePath = RARITY_SPRITE[chest.rarity] || RARITY_SPRITE.wood
+                    const texture = await PIXI.Assets.load(spritePath)
+                    const sprite = new PIXI.Sprite(texture)
+                    sprite.label = 'chest-marker'
+                    sprite.anchor.set(0.5, 0.5)
+                    sprite.scale.set(1.5)
+                    sprite.position.set(chest.x, chest.y)
+                    mapView.addChild(sprite)
+                } catch {
+                    // Fallback to simple circle if sprite fails to load
+                    const fallback = new PIXI.Graphics()
+                    fallback.label = 'chest-marker'
+                    fallback.circle(0, 0, 10)
+                    fallback.fill({ color: 0xff0000, alpha: 0.8 })
+                    fallback.position.set(chest.x, chest.y)
+                    mapView.addChild(fallback)
+                }
             }
         },
         []
@@ -80,7 +84,9 @@ export const ChestManager = () => {
     const [showRarityDropdown, setShowRarityDropdown] = useState(false)
     const [placingChest, setPlacingChest] = useState<PlacingChest | null>(null)
     const [isSaving, setIsSaving] = useState(false)
-    const [savedChests, setSavedChests] = useState<Array<{ id: number; x: number; y: number; rarity: string }>>([])
+    const [savedChests, setSavedChests] = useState<
+        Array<{ id: number; x: number; y: number; rarity: string; is_opened?: boolean }>
+    >([])
 
     // Refs for event handler closure access
     const isPlacingModeRef = useRef(false)
@@ -176,15 +182,16 @@ export const ChestManager = () => {
                     const result = await adminAPI.getChests()
                     if (result.success && result.chests.length > 0) {
                         const chestData = result.chests.map(
-                            (c: { id: number; x: number; y: number; rarity: string }) => ({
+                            (c: { id: number; x: number; y: number; rarity: string; is_opened?: boolean }) => ({
                                 id: c.id,
                                 x: c.x,
                                 y: c.y,
                                 rarity: c.rarity,
+                                is_opened: !!c.is_opened,
                             })
                         )
                         setSavedChests(chestData)
-                        renderChestMarkersOnMap(mapView, chestData)
+                        await renderChestMarkersOnMap(mapView, chestData)
                     }
                 } catch (e) {
                     console.warn('Failed to load existing chests:', e)
@@ -347,6 +354,50 @@ export const ChestManager = () => {
         setPlacingChest(null)
     }
 
+    const handleResetAllChests = async () => {
+        const openedCount = savedChests.filter((c) => c.is_opened).length
+        if (openedCount === 0) {
+            alert('リセットする宝箱がありません')
+            return
+        }
+        if (
+            !confirm(
+                `開封済みの宝箱 ${openedCount}個 をリセットしますか？\nリセットするとプレイヤーが再度挑戦できるようになります。`
+            )
+        ) {
+            return
+        }
+
+        try {
+            const result = await adminAPI.resetAllChests()
+            if (result.success) {
+                // Reload chests into game memory
+                await adminAPI.reloadChests()
+
+                // Refresh the admin view
+                const chestResult = await adminAPI.getChests()
+                if (chestResult.success) {
+                    const chestData = chestResult.chests.map(
+                        (c: { id: number; x: number; y: number; rarity: string; is_opened?: boolean }) => ({
+                            id: c.id,
+                            x: c.x,
+                            y: c.y,
+                            rarity: c.rarity,
+                            is_opened: !!c.is_opened,
+                        })
+                    )
+                    setSavedChests(chestData)
+                    if (mapViewRef.current) {
+                        await renderChestMarkersOnMap(mapViewRef.current, chestData)
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to reset chests:', error)
+            alert('宝箱のリセットに失敗しました')
+        }
+    }
+
     const handleSaveChest = async (data: ChestFormData) => {
         setIsSaving(true)
         try {
@@ -354,6 +405,7 @@ export const ChestManager = () => {
                 x: data.position.x,
                 y: data.position.y,
                 rarity: data.rarity,
+                title: data.title,
                 question: data.question,
                 hints: data.hints,
                 expectedAnswer: data.expectedAnswer,
@@ -373,7 +425,7 @@ export const ChestManager = () => {
                     const updated = [...prev, newChest]
                     // Re-render markers on map
                     if (mapViewRef.current) {
-                        renderChestMarkersOnMap(mapViewRef.current, updated)
+                        void renderChestMarkersOnMap(mapViewRef.current, updated)
                     }
                     return updated
                 })
@@ -422,6 +474,16 @@ export const ChestManager = () => {
                     宝箱を追加
                 </button>
 
+                {savedChests.some((c) => c.is_opened) && (
+                    <button
+                        className='btn-reset-chests'
+                        onClick={handleResetAllChests}
+                    >
+                        <span>🔄</span>
+                        開封済みリセット
+                    </button>
+                )}
+
                 {isPlacingMode && (
                     <button
                         className='btn-cancel'
@@ -462,8 +524,16 @@ export const ChestManager = () => {
                 </div>
                 <div className='control-group'>
                     <span className='control-label'>📦 宝箱:</span>
-                    <span className='control-value'>{savedChests.length}個</span>
+                    <span className='control-value'>
+                        {savedChests.filter((c) => !c.is_opened).length}/{savedChests.length}個
+                    </span>
                 </div>
+                {savedChests.some((c) => c.is_opened) && (
+                    <div className='control-group'>
+                        <span className='control-label'>🔓 開封済み:</span>
+                        <span className='control-value opened'>{savedChests.filter((c) => c.is_opened).length}個</span>
+                    </div>
+                )}
                 {isPlacingMode && (
                     <div className='placing-hint'>
                         <span>📍</span>

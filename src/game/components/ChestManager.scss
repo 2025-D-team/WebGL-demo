@@ -77,7 +77,8 @@
     align-items: center;
 
     .btn-add-chest,
-    .btn-cancel {
+    .btn-cancel,
+    .btn-reset-chests {
         display: flex;
         align-items: center;
         gap: 0.8rem;
@@ -108,6 +109,17 @@
         &:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+    }
+
+    .btn-reset-chests {
+        background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        color: white;
+
+        &:hover {
+            background: linear-gradient(135deg, #dd6b20 0%, #c05621 100%);
+            transform: translateY(-0.2rem);
+            box-shadow: 0 0.4rem 1.2rem rgba(237, 137, 54, 0.4);
         }
     }
 
@@ -223,6 +235,10 @@
             font-size: 1.6rem; // 16px
             font-weight: 600;
             color: #4299e1;
+
+            &.opened {
+                color: #fc8181;
+            }
         }
     }
 

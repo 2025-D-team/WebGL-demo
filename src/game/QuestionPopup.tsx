@@ -12,9 +12,9 @@ interface QuestionData {
     id: number
     title: string
     description: string
-    language: string
     difficulty: string
     hints: string[]
+    language?: string
 }
 
 export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel, isGrading = false }: QuestionPopupProps) => {
@@ -32,7 +32,6 @@ export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel, isGradi
                 id: 0,
                 title: '問題',
                 description: question,
-                language: 'javascript',
                 difficulty: 'easy',
                 hints: [],
             }
@@ -271,19 +270,21 @@ export const QuestionPopup = ({ question, timeLimit, onSubmit, onCancel, isGradi
                             >
                                 {questionData.difficulty.toUpperCase()}
                             </span>
-                            <span
-                                style={{
-                                    marginLeft: 12,
-                                    padding: '6px 12px',
-                                    borderRadius: 6,
-                                    fontSize: 12,
-                                    fontWeight: '600',
-                                    background: '#2196f3',
-                                    color: 'white',
-                                }}
-                            >
-                                {questionData.language}
-                            </span>
+                            {questionData.language && questionData.language !== 'any' && (
+                                <span
+                                    style={{
+                                        marginLeft: 12,
+                                        padding: '6px 12px',
+                                        borderRadius: 6,
+                                        fontSize: 12,
+                                        fontWeight: '600',
+                                        background: '#2196f3',
+                                        color: 'white',
+                                    }}
+                                >
+                                    {questionData.language}
+                                </span>
+                            )}
                         </div>
                     </div>
 

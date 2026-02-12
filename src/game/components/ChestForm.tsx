@@ -18,12 +18,14 @@ interface ChestFormProps {
 export interface ChestFormData {
     rarity: string
     position: { x: number; y: number }
+    title: string
     question: string
     hints: string[]
     expectedAnswer: string
 }
 
 export const ChestForm = ({ rarity, position, difficulty, onSave, onClose, isSaving = false }: ChestFormProps) => {
+    const [title, setTitle] = useState('')
     const [question, setQuestion] = useState('')
     const [hintInput, setHintInput] = useState('')
     const [hints, setHints] = useState<string[]>([])
@@ -51,6 +53,11 @@ export const ChestForm = ({ rarity, position, difficulty, onSave, onClose, isSav
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
+        if (!title.trim()) {
+            alert('タイトルを入力してください')
+            return
+        }
+
         if (!question.trim()) {
             alert('問題を入力してください')
             return
@@ -64,6 +71,7 @@ export const ChestForm = ({ rarity, position, difficulty, onSave, onClose, isSav
         onSave({
             rarity,
             position,
+            title: title.trim(),
             question: question.trim(),
             hints,
             expectedAnswer: expectedAnswer.trim(),
@@ -100,6 +108,22 @@ export const ChestForm = ({ rarity, position, difficulty, onSave, onClose, isSav
                                 ({position.x}, {position.y})
                             </span>
                         </div>
+                    </div>
+
+                    {/* Title */}
+                    <div className='form-section'>
+                        <label htmlFor='title'>
+                            タイトル <span className='required'>*</span>
+                        </label>
+                        <input
+                            id='title'
+                            type='text'
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder='例: Hello World 基礎、配列の合計 等'
+                            required
+                            autoFocus
+                        />
                     </div>
 
                     {/* Question */}
