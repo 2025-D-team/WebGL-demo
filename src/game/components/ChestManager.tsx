@@ -54,51 +54,48 @@ export const ChestManager = () => {
     const mapContainerRef = useRef<PIXI.Container | null>(null)
     const mapViewRef = useRef<PIXI.Container | null>(null)
 
-    const renderChestMarkersOnMap = useCallback(
-        async (mapView: PIXI.Container, chests: SavedChest[]) => {
-            // Remove existing markers
-            const existing = mapView.children.filter((c) => c.label === 'chest-marker')
-            existing.forEach((c) => mapView.removeChild(c))
+    const renderChestMarkersOnMap = useCallback(async (mapView: PIXI.Container, chests: SavedChest[]) => {
+        // Remove existing markers
+        const existing = mapView.children.filter((c) => c.label === 'chest-marker')
+        existing.forEach((c) => mapView.removeChild(c))
 
-            // Only render unopened chests
-            const unopenedChests = chests.filter((c) => !c.is_opened)
+        // Only render unopened chests
+        const unopenedChests = chests.filter((c) => !c.is_opened)
 
-            // Load and add sprite markers
-            for (const chest of unopenedChests) {
-                try {
-                    const spritePath = RARITY_SPRITE[chest.rarity] || RARITY_SPRITE.wood
-                    const texture = await PIXI.Assets.load(spritePath)
-                    const sprite = new PIXI.Sprite(texture)
-                    sprite.label = 'chest-marker'
-                    sprite.anchor.set(0.5, 0.5)
-                    sprite.scale.set(1.5)
-                    sprite.position.set(chest.x, chest.y)
-                    sprite.eventMode = 'static'
-                    sprite.cursor = 'pointer'
-                    sprite.on('pointertap', () => {
-                        if (isPlacingModeRef.current) return
-                        setActionChest(chest)
-                    })
-                    mapView.addChild(sprite)
-                } catch {
-                    // Fallback to simple circle if sprite fails to load
-                    const fallback = new PIXI.Graphics()
-                    fallback.label = 'chest-marker'
-                    fallback.circle(0, 0, 10)
-                    fallback.fill({ color: 0xff0000, alpha: 0.8 })
-                    fallback.position.set(chest.x, chest.y)
-                    fallback.eventMode = 'static'
-                    fallback.cursor = 'pointer'
-                    fallback.on('pointertap', () => {
-                        if (isPlacingModeRef.current) return
-                        setActionChest(chest)
-                    })
-                    mapView.addChild(fallback)
-                }
+        // Load and add sprite markers
+        for (const chest of unopenedChests) {
+            try {
+                const spritePath = RARITY_SPRITE[chest.rarity] || RARITY_SPRITE.wood
+                const texture = await PIXI.Assets.load(spritePath)
+                const sprite = new PIXI.Sprite(texture)
+                sprite.label = 'chest-marker'
+                sprite.anchor.set(0.5, 0.5)
+                sprite.scale.set(1.5)
+                sprite.position.set(chest.x, chest.y)
+                sprite.eventMode = 'static'
+                sprite.cursor = 'pointer'
+                sprite.on('pointertap', () => {
+                    if (isPlacingModeRef.current) return
+                    setActionChest(chest)
+                })
+                mapView.addChild(sprite)
+            } catch {
+                // Fallback to simple circle if sprite fails to load
+                const fallback = new PIXI.Graphics()
+                fallback.label = 'chest-marker'
+                fallback.circle(0, 0, 10)
+                fallback.fill({ color: 0xff0000, alpha: 0.8 })
+                fallback.position.set(chest.x, chest.y)
+                fallback.eventMode = 'static'
+                fallback.cursor = 'pointer'
+                fallback.on('pointertap', () => {
+                    if (isPlacingModeRef.current) return
+                    setActionChest(chest)
+                })
+                mapView.addChild(fallback)
             }
-        },
-        []
-    )
+        }
+    }, [])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [zoom, setZoom] = useState(50) // Display zoom percentage

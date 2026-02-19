@@ -336,6 +336,7 @@ export const adminBossAPI = {
         x: number
         y: number
         spawnDelaySeconds?: number
+        respawnDelaySeconds?: number
         availableFrom?: string
         bossTemplateId?: number
         newBoss?: {
@@ -343,6 +344,7 @@ export const adminBossAPI = {
             description?: string
             timeLimitSeconds?: number
             spawnDelaySeconds?: number
+            respawnDelaySeconds?: number
             questions: Array<{
                 title: string
                 description: string

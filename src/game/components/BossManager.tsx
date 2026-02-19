@@ -24,6 +24,7 @@ interface BossSpawn {
     boss_status: string
     is_active: boolean
     available_from?: string
+    respawn_delay_seconds?: number
     is_spawn_ready?: boolean
 }
 
@@ -193,6 +194,7 @@ export const BossManager = () => {
                             boss_status: s.boss_status || 'active',
                             is_active: s.is_active,
                             available_from: s.available_from,
+                            respawn_delay_seconds: s.respawn_delay_seconds,
                             is_spawn_ready: s.is_spawn_ready,
                         }))
                         setSavedSpawns(spawnData)
@@ -401,6 +403,7 @@ export const BossManager = () => {
                 availableFrom: data.availableFrom,
                 bossTemplateId: data.bossTemplateId,
                 newBoss: data.newBoss,
+                respawnDelaySeconds: data.respawnDelaySeconds,
             })
 
             if (result.success) {
@@ -417,6 +420,7 @@ export const BossManager = () => {
                     boss_status: 'active',
                     is_active: true,
                     available_from: result.spawn.available_from,
+                    respawn_delay_seconds: result.spawn.respawn_delay_seconds,
                     is_spawn_ready: result.spawn.is_spawn_ready,
                 }
 
@@ -541,9 +545,13 @@ export const BossManager = () => {
                                     </span>
                                     {spawn.available_from && (
                                         <span className='boss-pos'>
-                                            出現: {new Date(spawn.available_from).toLocaleString('ja-JP')}
+                                            出現:{' '}
+                                            {new Date(spawn.available_from).toLocaleString('ja-JP', {
+                                                timeZone: 'Asia/Tokyo',
+                                            })}
                                         </span>
                                     )}
+                                    <span className='boss-pos'>再出現間隔: {spawn.respawn_delay_seconds ?? 0}秒</span>
                                     {spawn.is_spawn_ready === false && (
                                         <span style={{ color: '#fbbf24', fontSize: 12 }}>待機中</span>
                                     )}

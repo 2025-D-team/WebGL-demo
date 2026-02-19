@@ -240,7 +240,11 @@ export const ChestForm = ({
                             className='btn-submit'
                             disabled={isSaving}
                         >
-                            {isSaving ? '保存中...' : mode === 'edit' ? '更新' : '保存'}
+                            {isSaving ?
+                                '保存中...'
+                            : mode === 'edit' ?
+                                '更新'
+                            :   '保存'}
                         </button>
                     </div>
                 </form>

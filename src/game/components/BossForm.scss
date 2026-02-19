@@ -132,7 +132,8 @@
 
         textarea,
         input[type='text'],
-        input[type='number'] {
+        input[type='number'],
+        select {
             background: rgba(26, 32, 44, 0.6);
             border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 1rem;
@@ -155,9 +156,37 @@
             }
         }
 
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0aec0'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1.2rem center;
+            background-size: 2rem;
+            padding-right: 3.8rem;
+        }
+
         textarea {
             min-height: 6rem;
         }
+    }
+
+    .spawn-delay-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0.8rem;
+    }
+
+    .spawn-delay-total {
+        font-size: 1.3rem;
+        color: #f6ad55;
+        font-weight: 600;
+    }
+
+    .spawn-delay-error {
+        font-size: 1.2rem;
+        color: #fc8181;
+        font-weight: 600;
     }
 
     .fixed-info {

@@ -57,6 +57,10 @@ export const useGameState = () => {
     const [equippedItems, setEquippedItems] = useState<PlayerEquipment | null>(null)
     const [playerScore, setPlayerScore] = useState<number | null>(null)
     const [worldMessages, setWorldMessages] = useState<WorldMessageData[]>([])
+    const [bossSpawnCountdown, setBossSpawnCountdown] = useState<{
+        bossName: string
+        remainingSeconds: number
+    } | null>(null)
 
     // Game ready state
     const [characterReady, setCharacterReady] = useState(false)
@@ -106,6 +110,8 @@ export const useGameState = () => {
         setPlayerScore,
         worldMessages,
         setWorldMessages,
+        bossSpawnCountdown,
+        setBossSpawnCountdown,
         characterReady,
         setCharacterReady,
     }

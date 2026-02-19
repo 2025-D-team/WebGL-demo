@@ -20,6 +20,7 @@ interface GameOverlaysProps {
         timeLimit: number
     } | null
     isGrading: boolean
+    bossSpawnCountdown: { bossName: string; remainingSeconds: number } | null
     onSubmitAnswer: (answer: string) => void
     onCancelQuestion: () => void
 }
@@ -37,11 +38,44 @@ export const GameOverlays = ({
     localPlayerId,
     questionData,
     isGrading,
+    bossSpawnCountdown,
     onSubmitAnswer,
     onCancelQuestion,
 }: GameOverlaysProps) => {
+    const formatRemaining = (seconds: number) => {
+        const mm = Math.floor(seconds / 60)
+        const ss = seconds % 60
+        return `${String(mm).padStart(2, '0')}分 ${String(ss).padStart(2, '0')}秒`
+    }
+
     return (
         <>
+            {/* Boss spawn countdown event banner (< 5 minutes) */}
+            {bossSpawnCountdown && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 16,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'rgba(20, 0, 0, 0.78)',
+                        color: '#ef4444',
+                        border: '1px solid rgba(239,68,68,0.6)',
+                        borderRadius: 10,
+                        padding: '10px 18px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                        zIndex: 10005,
+                        fontSize: 20,
+                        fontWeight: 800,
+                        letterSpacing: 0.2,
+                        pointerEvents: 'none',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    {`イベント: ${bossSpawnCountdown.bossName} の出現まで ${formatRemaining(bossSpawnCountdown.remainingSeconds)}`}
+                </div>
+            )}
+
             {/* Chest interaction hint */}
             {nearbyChest &&
                 nearbyChestPos &&

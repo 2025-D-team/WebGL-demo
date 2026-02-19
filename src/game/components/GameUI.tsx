@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { type CatalogEquipmentItem, type EquipmentSlot, type PlayerEquipment } from '../equipment/types'
 import { type WorldMessageData } from '../MultiplayerManager'
+import { type CatalogEquipmentItem, type EquipmentSlot, type PlayerEquipment } from '../equipment/types'
 
 interface GameUIProps {
     showEmojiPicker: boolean
@@ -65,6 +65,7 @@ export const GameUI = ({
     const [activeShopTab, setActiveShopTab] = useState<EquipmentSlot>('head')
     const [showSettings, setShowSettings] = useState(false)
     const [showProfileModal, setShowProfileModal] = useState(false)
+    const [isWorldMessageCollapsed, setIsWorldMessageCollapsed] = useState(false)
     const [profileUsername, setProfileUsername] = useState(currentUsername)
     const [profileEmail, setProfileEmail] = useState(currentEmail)
     const [profileError, setProfileError] = useState('')
@@ -102,8 +103,7 @@ export const GameUI = ({
     const emojis = ['😄', '😀', '😂', '🤣', '😊', '🙂', '😉', '😍', '😘', '🥰', '😇', '🤩', '😮', '😲', '😢', '😡']
     const formatWorldTime = (raw: string) => {
         // MySQL DATETIME often arrives without timezone. Treat it as UTC, then render in JST.
-        const normalizedRaw =
-            /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw) ? raw.replace(' ', 'T') + 'Z' : raw
+        const normalizedRaw = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw) ? raw.replace(' ', 'T') + 'Z' : raw
         const date = new Date(normalizedRaw)
         if (Number.isNaN(date.getTime())) return '--:--'
 
@@ -124,10 +124,14 @@ export const GameUI = ({
     }
 
     useEffect(() => {
+        if (isWorldMessageCollapsed) return
         const el = worldMessageListRef.current
         if (!el) return
-        el.scrollTop = el.scrollHeight
-    }, [worldMessages])
+        // Keep viewport pinned to latest message when panel is open.
+        requestAnimationFrame(() => {
+            el.scrollTop = el.scrollHeight
+        })
+    }, [worldMessages, isWorldMessageCollapsed])
 
     const openProfileModal = () => {
         setProfileUsername(currentUsername)
@@ -270,42 +274,83 @@ export const GameUI = ({
                     😊
                 </button>
 
-                <div
-                    ref={worldMessageListRef}
-                    style={{
-                        width: 360,
-                        minHeight: 132,
-                        maxHeight: 160,
-                        borderRadius: 8,
-                        border: '1px solid rgba(255,255,255,0.22)',
-                        background: 'rgba(0,0,0,0.58)',
-                        boxShadow: '0 8px 20px rgba(0,0,0,0.45)',
-                        padding: '8px 10px',
-                        overflowY: 'auto',
-                    }}
-                >
-                    {worldMessages.length === 0 ?
-                        <div style={{ color: '#cbd5e1', fontSize: 12, opacity: 0.8 }}>World Message</div>
-                    :   worldMessages.map((msg) => (
+                <div style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => setIsWorldMessageCollapsed((v) => !v)}
+                        style={{
+                            position: 'absolute',
+                            left: -24,
+                            top: -2,
+                            width: 22,
+                            height: 22,
+                            borderRadius: 6,
+                            border: '1px solid rgba(255,255,255,0.35)',
+                            background: 'linear-gradient(180deg, rgba(30,41,59,0.96), rgba(2,6,23,0.96))',
+                            color: '#e2e8f0',
+                            fontSize: 12,
+                            fontWeight: 800,
+                            zIndex: 1,
+                            display: 'grid',
+                            placeItems: 'center',
+                            padding: 0,
+                        }}
+                        title={isWorldMessageCollapsed ? '展開' : '折りたたむ'}
+                    >
+                        {isWorldMessageCollapsed ? '◀' : '▶'}
+                    </button>
+
+                    <div
+                        ref={worldMessageListRef}
+                        style={{
+                            width: isWorldMessageCollapsed ? 28 : 360,
+                            minHeight: 132,
+                            maxHeight: 160,
+                            borderRadius: 8,
+                            border: '1px solid rgba(255,255,255,0.22)',
+                            background: 'rgba(0,0,0,0.58)',
+                            boxShadow: '0 8px 20px rgba(0,0,0,0.45)',
+                            padding: isWorldMessageCollapsed ? '8px 4px' : '8px 10px',
+                            overflowY: isWorldMessageCollapsed ? 'hidden' : 'auto',
+                            overflowX: 'hidden',
+                        }}
+                    >
+                        {isWorldMessageCollapsed ?
                             <div
-                                key={msg.id}
                                 style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '78px 1fr',
-                                    gap: 8,
-                                    alignItems: 'center',
-                                    fontSize: 12,
-                                    lineHeight: 1.35,
-                                    marginBottom: 4,
+                                    writingMode: 'vertical-rl',
+                                    transform: 'rotate(180deg)',
+                                    color: '#94a3b8',
+                                    fontSize: 10,
+                                    letterSpacing: 1,
+                                    opacity: 0.9,
+                                    margin: '0 auto',
                                 }}
                             >
-                                <span style={{ color: '#94a3b8', fontFamily: 'monospace' }}>
-                                    {formatWorldTime(msg.created_at)}
-                                </span>
-                                <span style={{ color: msg.color_hex || '#e2e8f0' }}>{msg.message_text}</span>
+                                メッセージ
                             </div>
-                        ))
-                    }
+                        : worldMessages.length === 0 ?
+                            <div style={{ color: '#cbd5e1', fontSize: 12, opacity: 0.8 }}>ワールドメッセージ</div>
+                        :   worldMessages.map((msg) => (
+                                <div
+                                    key={msg.id}
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '78px 1fr',
+                                        gap: 8,
+                                        alignItems: 'center',
+                                        fontSize: 12,
+                                        lineHeight: 1.35,
+                                        marginBottom: 4,
+                                    }}
+                                >
+                                    <span style={{ color: '#94a3b8', fontFamily: 'monospace' }}>
+                                        {formatWorldTime(msg.created_at)}
+                                    </span>
+                                    <span style={{ color: msg.color_hex || '#e2e8f0' }}>{msg.message_text}</span>
+                                </div>
+                            ))
+                        }
+                    </div>
                 </div>
             </div>
 
@@ -631,7 +676,9 @@ export const GameUI = ({
                                                         padding: 6,
                                                     }}
                                                 >
-                                                    <div style={{ fontSize: 11, opacity: 0.8 }}>{SLOT_LABELS[slot]}</div>
+                                                    <div style={{ fontSize: 11, opacity: 0.8 }}>
+                                                        {SLOT_LABELS[slot]}
+                                                    </div>
                                                     {equipped ?
                                                         <img
                                                             src={equipped.assets.down}
@@ -879,7 +926,10 @@ export const GameUI = ({
                                 }}
                             >
                                 {(['head', 'armor', 'foot'] as EquipmentSlot[]).map((slot) => {
-                                    const icon = slot === 'head' ? '⛑' : slot === 'armor' ? '🛡' : '🥾'
+                                    const icon =
+                                        slot === 'head' ? '⛑'
+                                        : slot === 'armor' ? '🛡'
+                                        : '🥾'
                                     return (
                                         <button
                                             key={slot}
@@ -957,7 +1007,9 @@ export const GameUI = ({
                                                 <span style={{ fontSize: 11, lineHeight: 1.2, textAlign: 'center' }}>
                                                     {item.name}
                                                 </span>
-                                                <span style={{ fontSize: 11, color: '#fcd34d' }}>価格: {item.price}pt</span>
+                                                <span style={{ fontSize: 11, color: '#fcd34d' }}>
+                                                    価格: {item.price}pt
+                                                </span>
                                                 {owned ?
                                                     <button
                                                         disabled

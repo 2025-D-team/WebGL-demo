@@ -59,8 +59,17 @@ export interface MultiplayerCallbacks {
             timeLimitSeconds: number
             templateId: number
             availableFrom?: string
+            respawnDelaySeconds?: number
         }>
     ) => void
+    onBossSpawnCountdown?: (data: {
+        serverTimeMs: number
+        events: Array<{
+            spawnId: number
+            bossName: string
+            remainingSeconds: number
+        }>
+    }) => void
     onChestUpdate?: (chest: ChestData) => void
     onChestOpened?: (data: { chestId: string }) => void
     onChestInteractResult?: (result: { success: boolean; chestId?: string; reason?: string; message?: string }) => void
@@ -224,10 +233,21 @@ export class MultiplayerManager {
                     timeLimitSeconds: number
                     templateId: number
                     availableFrom?: string
+                    respawnDelaySeconds?: number
                 }>
             }) => {
                 console.log('👹 Boss spawns updated:', data.bosses.length)
                 this.callbacks.onBossSpawned?.(data.bosses)
+            }
+        )
+
+        this.socket.on(
+            'boss:spawn_countdown',
+            (data: {
+                serverTimeMs: number
+                events: Array<{ spawnId: number; bossName: string; remainingSeconds: number }>
+            }) => {
+                this.callbacks.onBossSpawnCountdown?.(data)
             }
         )
 

@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 
 import { GameConfig } from '../config/gameConfig'
 import { CollisionManager } from './CollisionManager'
+import { type WorldMessageData } from './MultiplayerManager'
 import { TiledMapLoader } from './TiledMapLoader'
 import { GameOverlays } from './components/GameOverlays'
 import { GameUI } from './components/GameUI'
-import { type WorldMessageData } from './MultiplayerManager'
 import { EQUIPMENT_BY_ID } from './equipment/EquipmentConfig'
 import { type CatalogEquipmentItem, type PlayerEquipment } from './equipment/types'
 import { useGameEngine } from './hooks/useGameEngine'
@@ -91,6 +91,8 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         setPlayerScore,
         worldMessages,
         setWorldMessages,
+        bossSpawnCountdown,
+        setBossSpawnCountdown,
         characterReady,
         setCharacterReady,
     } = useGameState()
@@ -335,6 +337,17 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                 bossesRef.current.set(bossData.id, bossEntity)
                             }
                             console.log(`👹 Boss spawns reloaded: ${bosses.length} bosses`)
+                        },
+                        onBossSpawnCountdown: (data) => {
+                            if (!data.events || data.events.length === 0) {
+                                setBossSpawnCountdown(null)
+                                return
+                            }
+                            const nearest = [...data.events].sort((a, b) => a.remainingSeconds - b.remainingSeconds)[0]
+                            setBossSpawnCountdown({
+                                bossName: nearest.bossName,
+                                remainingSeconds: nearest.remainingSeconds,
+                            })
                         },
                         onBossQuestion: (data) => {
                             setQuestionData({
@@ -763,6 +776,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 localPlayerId={multiplayerRef.current?.getLocalPlayerId() || null}
                 questionData={questionData}
                 isGrading={isGrading}
+                bossSpawnCountdown={bossSpawnCountdown}
                 onSubmitAnswer={handleSubmitAnswer}
                 onCancelQuestion={handleCancelQuestion}
             />

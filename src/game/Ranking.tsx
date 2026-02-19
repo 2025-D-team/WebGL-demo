@@ -28,10 +28,7 @@ export const Ranking = ({ players, localPlayerId }: RankingProps) => {
         })
     }, [players])
 
-    const allTimeSorted = useMemo(
-        () => [...allTimePlayers].sort((a, b) => b.score - a.score),
-        [allTimePlayers]
-    )
+    const allTimeSorted = useMemo(() => [...allTimePlayers].sort((a, b) => b.score - a.score), [allTimePlayers])
 
     const onlineDisplayState = useMemo(() => {
         const top8 = sortedOnlinePlayers.slice(0, 8)
@@ -269,10 +266,7 @@ export const Ranking = ({ players, localPlayerId }: RankingProps) => {
                                             gap: 8,
                                             padding: '0 10px',
                                             marginBottom: 6,
-                                            background:
-                                                player.isBot ?
-                                                    'rgba(30,41,59,0.68)'
-                                                :   'rgba(15,23,42,0.45)',
+                                            background: player.isBot ? 'rgba(30,41,59,0.68)' : 'rgba(15,23,42,0.45)',
                                             border: '1px solid rgba(148,163,184,0.25)',
                                         }}
                                     >

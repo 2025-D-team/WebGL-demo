@@ -29,12 +29,14 @@ export interface BossFormData {
     position: { x: number; y: number }
     bossTemplateId?: number
     spawnDelaySeconds?: number
+    respawnDelaySeconds?: number
     availableFrom?: string
     newBoss?: {
         name: string
         description?: string
         timeLimitSeconds: number
         spawnDelaySeconds?: number
+        respawnDelaySeconds?: number
         questions: BossQuestion[]
     }
 }
@@ -61,7 +63,15 @@ export const BossForm = ({ position, onSave, onClose, isSaving = false }: BossFo
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
     const [timeLimitSeconds, setTimeLimitSeconds] = useState(600)
-    const [spawnDelaySeconds, setSpawnDelaySeconds] = useState(0)
+    const [spawnDelayHours, setSpawnDelayHours] = useState<number | ''>('')
+    const [spawnDelayMinutes, setSpawnDelayMinutes] = useState<number | ''>('')
+    const [spawnDelaySecondsOnly, setSpawnDelaySecondsOnly] = useState<number | ''>('')
+
+    const isSpawnDelayConfigured = spawnDelayHours !== '' && spawnDelayMinutes !== '' && spawnDelaySecondsOnly !== ''
+    const spawnDelaySeconds =
+        isSpawnDelayConfigured ?
+            Number(spawnDelayHours) * 3600 + Number(spawnDelayMinutes) * 60 + Number(spawnDelaySecondsOnly)
+        :   0
 
     // Questions state
     const [questions, setQuestions] = useState<BossQuestion[]>([])
@@ -208,15 +218,21 @@ export const BossForm = ({ position, onSave, onClose, isSaving = false }: BossFo
             alert('AI生成の質問がまだ生成されていません。先に「AIで質問を生成」を実行してください。')
             return
         }
+        if (!isSpawnDelayConfigured) {
+            alert('出現までの待機時間（時・分・秒）は必須です')
+            return
+        }
 
         onSave({
             position,
             spawnDelaySeconds,
+            respawnDelaySeconds: spawnDelaySeconds,
             newBoss: {
                 name: name.trim(),
                 description: description.trim() || undefined,
                 timeLimitSeconds,
                 spawnDelaySeconds,
+                respawnDelaySeconds: spawnDelaySeconds,
                 questions,
             },
         })
@@ -307,17 +323,70 @@ export const BossForm = ({ position, onSave, onClose, isSaving = false }: BossFo
                     </div>
 
                     <div className='form-section'>
-                        <label htmlFor='boss-spawn-delay'>
-                            ⌛ 出現までの待機時間(秒) <span className='hint-text'>— 0で即時出現</span>
+                        <label>
+                            ⌛ 出現までの待機時間 <span className='required'>*</span>
+                            <span className='hint-text'>— 24時間以内。0時間0分0秒で即時出現</span>
                         </label>
-                        <input
-                            id='boss-spawn-delay'
-                            type='number'
-                            value={spawnDelaySeconds}
-                            onChange={(e) => setSpawnDelaySeconds(Math.max(0, Number(e.target.value) || 0))}
-                            min={0}
-                            step={30}
-                        />
+                        <div className='spawn-delay-grid'>
+                            <select
+                                className='spawn-delay-select'
+                                value={spawnDelayHours}
+                                onChange={(e) =>
+                                    setSpawnDelayHours(e.target.value === '' ? '' : Number(e.target.value))
+                                }
+                                required
+                            >
+                                <option value=''>時</option>
+                                {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                                    <option
+                                        key={h}
+                                        value={h}
+                                    >
+                                        {h}時間
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                className='spawn-delay-select'
+                                value={spawnDelayMinutes}
+                                onChange={(e) =>
+                                    setSpawnDelayMinutes(e.target.value === '' ? '' : Number(e.target.value))
+                                }
+                                required
+                            >
+                                <option value=''>分</option>
+                                {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                                    <option
+                                        key={m}
+                                        value={m}
+                                    >
+                                        {m}分
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                className='spawn-delay-select'
+                                value={spawnDelaySecondsOnly}
+                                onChange={(e) =>
+                                    setSpawnDelaySecondsOnly(e.target.value === '' ? '' : Number(e.target.value))
+                                }
+                                required
+                            >
+                                <option value=''>秒</option>
+                                {Array.from({ length: 60 }, (_, i) => i).map((s) => (
+                                    <option
+                                        key={s}
+                                        value={s}
+                                    >
+                                        {s}秒
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className='spawn-delay-total'>合計: {spawnDelaySeconds}秒</div>
+                        {!isSpawnDelayConfigured && (
+                            <div className='spawn-delay-error'>時・分・秒をすべて選択してください</div>
+                        )}
                     </div>
 
                     {/* ===== QUESTIONS SECTION ===== */}
@@ -629,7 +698,7 @@ export const BossForm = ({ position, onSave, onClose, isSaving = false }: BossFo
                         <button
                             type='submit'
                             className='btn-submit'
-                            disabled={isSaving || projectedTotal === 0 || !name.trim()}
+                            disabled={isSaving || projectedTotal === 0 || !name.trim() || !isSpawnDelayConfigured}
                         >
                             {isSaving ? '保存中...' : `配置する (HP:${projectedHp})`}
                         </button>
