@@ -28,10 +28,13 @@ interface BossFormProps {
 export interface BossFormData {
     position: { x: number; y: number }
     bossTemplateId?: number
+    spawnDelaySeconds?: number
+    availableFrom?: string
     newBoss?: {
         name: string
         description?: string
         timeLimitSeconds: number
+        spawnDelaySeconds?: number
         questions: BossQuestion[]
     }
 }
@@ -58,6 +61,7 @@ export const BossForm = ({ position, onSave, onClose, isSaving = false }: BossFo
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
     const [timeLimitSeconds, setTimeLimitSeconds] = useState(600)
+    const [spawnDelaySeconds, setSpawnDelaySeconds] = useState(0)
 
     // Questions state
     const [questions, setQuestions] = useState<BossQuestion[]>([])
@@ -207,10 +211,12 @@ export const BossForm = ({ position, onSave, onClose, isSaving = false }: BossFo
 
         onSave({
             position,
+            spawnDelaySeconds,
             newBoss: {
                 name: name.trim(),
                 description: description.trim() || undefined,
                 timeLimitSeconds,
+                spawnDelaySeconds,
                 questions,
             },
         })
@@ -296,6 +302,20 @@ export const BossForm = ({ position, onSave, onClose, isSaving = false }: BossFo
                             value={timeLimitSeconds}
                             onChange={(e) => setTimeLimitSeconds(Number(e.target.value))}
                             min={30}
+                            step={30}
+                        />
+                    </div>
+
+                    <div className='form-section'>
+                        <label htmlFor='boss-spawn-delay'>
+                            ⌛ 出現までの待機時間(秒) <span className='hint-text'>— 0で即時出現</span>
+                        </label>
+                        <input
+                            id='boss-spawn-delay'
+                            type='number'
+                            value={spawnDelaySeconds}
+                            onChange={(e) => setSpawnDelaySeconds(Math.max(0, Number(e.target.value) || 0))}
+                            min={0}
                             step={30}
                         />
                     </div>

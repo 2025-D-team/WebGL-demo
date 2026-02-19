@@ -19,6 +19,27 @@ interface PlacingChest {
     y: number
 }
 
+interface SavedChest {
+    id: number
+    x: number
+    y: number
+    rarity: string
+    is_opened?: boolean
+}
+
+interface EditingChest {
+    id: number
+    rarity: ChestRarity
+    position: { x: number; y: number }
+    difficulty: string
+    initialData: {
+        title: string
+        question: string
+        hints: string[]
+        expectedAnswer: string
+    }
+}
+
 // Rarity sprite paths (matching ChestEntity.ts RARITY_SPRITE_MAP)
 const RARITY_SPRITE: Record<string, string> = {
     wood: '/chest/wood/chest_wood.png',
@@ -34,10 +55,7 @@ export const ChestManager = () => {
     const mapViewRef = useRef<PIXI.Container | null>(null)
 
     const renderChestMarkersOnMap = useCallback(
-        async (
-            mapView: PIXI.Container,
-            chests: Array<{ id: number; x: number; y: number; rarity: string; is_opened?: boolean }>
-        ) => {
+        async (mapView: PIXI.Container, chests: SavedChest[]) => {
             // Remove existing markers
             const existing = mapView.children.filter((c) => c.label === 'chest-marker')
             existing.forEach((c) => mapView.removeChild(c))
@@ -55,6 +73,12 @@ export const ChestManager = () => {
                     sprite.anchor.set(0.5, 0.5)
                     sprite.scale.set(1.5)
                     sprite.position.set(chest.x, chest.y)
+                    sprite.eventMode = 'static'
+                    sprite.cursor = 'pointer'
+                    sprite.on('pointertap', () => {
+                        if (isPlacingModeRef.current) return
+                        setActionChest(chest)
+                    })
                     mapView.addChild(sprite)
                 } catch {
                     // Fallback to simple circle if sprite fails to load
@@ -63,6 +87,12 @@ export const ChestManager = () => {
                     fallback.circle(0, 0, 10)
                     fallback.fill({ color: 0xff0000, alpha: 0.8 })
                     fallback.position.set(chest.x, chest.y)
+                    fallback.eventMode = 'static'
+                    fallback.cursor = 'pointer'
+                    fallback.on('pointertap', () => {
+                        if (isPlacingModeRef.current) return
+                        setActionChest(chest)
+                    })
                     mapView.addChild(fallback)
                 }
             }
@@ -84,9 +114,9 @@ export const ChestManager = () => {
     const [showRarityDropdown, setShowRarityDropdown] = useState(false)
     const [placingChest, setPlacingChest] = useState<PlacingChest | null>(null)
     const [isSaving, setIsSaving] = useState(false)
-    const [savedChests, setSavedChests] = useState<
-        Array<{ id: number; x: number; y: number; rarity: string; is_opened?: boolean }>
-    >([])
+    const [savedChests, setSavedChests] = useState<SavedChest[]>([])
+    const [actionChest, setActionChest] = useState<SavedChest | null>(null)
+    const [editingChest, setEditingChest] = useState<EditingChest | null>(null)
 
     // Refs for event handler closure access
     const isPlacingModeRef = useRef(false)
@@ -354,6 +384,83 @@ export const ChestManager = () => {
         setPlacingChest(null)
     }
 
+    const handleOpenEditChest = async () => {
+        if (!actionChest) return
+        try {
+            const result = await adminAPI.getChestById(actionChest.id)
+            if (!result.success || !result.chest) {
+                alert(result.error || '宝箱情報の取得に失敗しました')
+                return
+            }
+
+            const chest = result.chest as {
+                id: number
+                x: number
+                y: number
+                rarity: string
+                title?: string
+                description?: string
+                hints?: string[] | string
+                expected_output?: string
+            }
+
+            let rawHints: string[] = []
+            if (Array.isArray(chest.hints)) {
+                rawHints = chest.hints
+            } else if (typeof chest.hints === 'string') {
+                try {
+                    rawHints = JSON.parse(chest.hints || '[]')
+                } catch {
+                    rawHints = []
+                }
+            }
+
+            const rarity = (chest.rarity as ChestRarity) || 'wood'
+            setEditingChest({
+                id: chest.id,
+                rarity,
+                position: { x: chest.x, y: chest.y },
+                difficulty: rarityConfig[rarity].difficulty,
+                initialData: {
+                    title: chest.title || '',
+                    question: chest.description || '',
+                    hints: Array.isArray(rawHints) ? rawHints : [],
+                    expectedAnswer: chest.expected_output || '',
+                },
+            })
+            setActionChest(null)
+        } catch (error) {
+            console.error('Failed to open chest editor:', error)
+            alert('宝箱情報の取得に失敗しました')
+        }
+    }
+
+    const handleDeleteChest = async () => {
+        if (!actionChest) return
+        if (!confirm('この宝箱を削除しますか？関連する問題データも削除されます。')) return
+
+        try {
+            const result = await adminAPI.deleteChest(actionChest.id)
+            if (result.success) {
+                const deletedId = actionChest.id
+                setSavedChests((prev) => {
+                    const updated = prev.filter((c) => c.id !== deletedId)
+                    if (mapViewRef.current) {
+                        void renderChestMarkersOnMap(mapViewRef.current, updated)
+                    }
+                    return updated
+                })
+                setActionChest(null)
+                await adminAPI.reloadChests()
+            } else {
+                alert(result.error || '宝箱の削除に失敗しました')
+            }
+        } catch (error) {
+            console.error('Failed to delete chest:', error)
+            alert('宝箱の削除に失敗しました')
+        }
+    }
+
     const handleResetAllChests = async () => {
         const openedCount = savedChests.filter((c) => c.is_opened).length
         if (openedCount === 0) {
@@ -438,6 +545,50 @@ export const ChestManager = () => {
         } catch (error) {
             console.error('Failed to save chest:', error)
             alert('宝箱の保存に失敗しました')
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleUpdateChest = async (data: ChestFormData) => {
+        if (!editingChest) return
+        setIsSaving(true)
+        try {
+            const result = await adminAPI.updateChest(editingChest.id, {
+                x: data.position.x,
+                y: data.position.y,
+                rarity: data.rarity,
+                title: data.title,
+                question: data.question,
+                hints: data.hints,
+                expectedAnswer: data.expectedAnswer,
+            })
+
+            if (result.success) {
+                setSavedChests((prev) => {
+                    const updated = prev.map((chest) =>
+                        chest.id === editingChest.id ?
+                            {
+                                ...chest,
+                                x: data.position.x,
+                                y: data.position.y,
+                                rarity: data.rarity,
+                            }
+                        :   chest
+                    )
+                    if (mapViewRef.current) {
+                        void renderChestMarkersOnMap(mapViewRef.current, updated)
+                    }
+                    return updated
+                })
+                await adminAPI.reloadChests()
+                setEditingChest(null)
+            } else {
+                alert(result.error || '宝箱の更新に失敗しました')
+            }
+        } catch (error) {
+            console.error('Failed to update chest:', error)
+            alert('宝箱の更新に失敗しました')
         } finally {
             setIsSaving(false)
         }
@@ -550,6 +701,38 @@ export const ChestManager = () => {
                 className='map-canvas'
             />
 
+            {/* Chest Action Modal */}
+            {actionChest && (
+                <div className='chest-action-overlay'>
+                    <div className='chest-action-modal'>
+                        <h4>📦 宝箱 #{actionChest.id}</h4>
+                        <p>
+                            ({actionChest.x}, {actionChest.y}) / {actionChest.rarity}
+                        </p>
+                        <div className='chest-action-buttons'>
+                            <button
+                                className='btn-action-edit'
+                                onClick={handleOpenEditChest}
+                            >
+                                ✏️ 編集
+                            </button>
+                            <button
+                                className='btn-action-delete'
+                                onClick={handleDeleteChest}
+                            >
+                                🗑️ 削除
+                            </button>
+                            <button
+                                className='btn-action-cancel'
+                                onClick={() => setActionChest(null)}
+                            >
+                                キャンセル
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Chest Form Modal */}
             {placingChest && (
                 <ChestForm
@@ -558,6 +741,19 @@ export const ChestManager = () => {
                     difficulty={rarityConfig[placingChest.rarity].difficulty}
                     onSave={handleSaveChest}
                     onClose={handleCloseForm}
+                    isSaving={isSaving}
+                />
+            )}
+
+            {editingChest && (
+                <ChestForm
+                    mode='edit'
+                    rarity={editingChest.rarity}
+                    position={editingChest.position}
+                    difficulty={editingChest.difficulty}
+                    initialData={editingChest.initialData}
+                    onSave={handleUpdateChest}
+                    onClose={() => setEditingChest(null)}
                     isSaving={isSaving}
                 />
             )}

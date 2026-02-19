@@ -23,6 +23,8 @@ interface BossSpawn {
     current_hp: number
     boss_status: string
     is_active: boolean
+    available_from?: string
+    is_spawn_ready?: boolean
 }
 
 interface PlacingBoss {
@@ -190,6 +192,8 @@ export const BossManager = () => {
                             current_hp: s.current_hp ?? s.max_hp,
                             boss_status: s.boss_status || 'active',
                             is_active: s.is_active,
+                            available_from: s.available_from,
+                            is_spawn_ready: s.is_spawn_ready,
                         }))
                         setSavedSpawns(spawnData)
                         await renderBossMarkersOnMap(mapView, spawnData)
@@ -393,6 +397,8 @@ export const BossManager = () => {
             const result = await adminBossAPI.createSpawn({
                 x: data.position.x,
                 y: data.position.y,
+                spawnDelaySeconds: data.spawnDelaySeconds,
+                availableFrom: data.availableFrom,
                 bossTemplateId: data.bossTemplateId,
                 newBoss: data.newBoss,
             })
@@ -410,6 +416,8 @@ export const BossManager = () => {
                     current_hp: result.spawn.max_hp,
                     boss_status: 'active',
                     is_active: true,
+                    available_from: result.spawn.available_from,
+                    is_spawn_ready: result.spawn.is_spawn_ready,
                 }
 
                 setSavedSpawns((prev) => {
@@ -531,6 +539,14 @@ export const BossManager = () => {
                                             <span style={{ color: '#e53e3e', marginLeft: 6 }}>撃破済</span>
                                         )}
                                     </span>
+                                    {spawn.available_from && (
+                                        <span className='boss-pos'>
+                                            出現: {new Date(spawn.available_from).toLocaleString('ja-JP')}
+                                        </span>
+                                    )}
+                                    {spawn.is_spawn_ready === false && (
+                                        <span style={{ color: '#fbbf24', fontSize: 12 }}>待機中</span>
+                                    )}
                                     {spawn.max_hp > 0 && (
                                         <div
                                             style={{

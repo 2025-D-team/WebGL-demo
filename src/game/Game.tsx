@@ -5,9 +5,40 @@ import { CollisionManager } from './CollisionManager'
 import { TiledMapLoader } from './TiledMapLoader'
 import { GameOverlays } from './components/GameOverlays'
 import { GameUI } from './components/GameUI'
+import { type WorldMessageData } from './MultiplayerManager'
+import { EQUIPMENT_BY_ID } from './equipment/EquipmentConfig'
+import { type CatalogEquipmentItem, type PlayerEquipment } from './equipment/types'
 import { useGameEngine } from './hooks/useGameEngine'
 import { useGameLoop } from './hooks/useGameLoop'
 import { useGameState } from './hooks/useGameState'
+
+const mapServerCatalogToFrontend = (items: unknown[]): CatalogEquipmentItem[] => {
+    const allowedSlots = new Set(['head', 'armor', 'foot'])
+    return items
+        .map((raw) => {
+            const item = raw as {
+                id?: string
+                name?: string
+                slot?: string
+                setId?: string
+                price?: number
+                enabled?: boolean
+            }
+            if (!item?.id || !item.slot || !allowedSlots.has(item.slot)) return null
+
+            const local = EQUIPMENT_BY_ID.get(item.id)
+            if (!local) return null
+
+            return {
+                ...local,
+                name: item.name || local.name,
+                setId: item.setId || local.setId,
+                price: typeof item.price === 'number' ? item.price : local.price,
+                enabled: typeof item.enabled === 'boolean' ? item.enabled : local.enabled,
+            } satisfies CatalogEquipmentItem
+        })
+        .filter((item): item is CatalogEquipmentItem => item !== null)
+}
 
 export const Game = ({ playerName = '' }: { playerName?: string }) => {
     const canvasRef = useRef<HTMLDivElement | null>(null)
@@ -44,6 +75,20 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         setQuestionData,
         isGrading,
         setIsGrading,
+        showInventory,
+        setShowInventory,
+        showShop,
+        setShowShop,
+        itemCatalog,
+        setItemCatalog,
+        inventory,
+        setInventory,
+        equippedItems,
+        setEquippedItems,
+        playerScore,
+        setPlayerScore,
+        worldMessages,
+        setWorldMessages,
         characterReady,
         setCharacterReady,
     } = useGameState()
@@ -58,7 +103,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
 
         let isMounted = true
         const app = appRef.current
-        let localMultiplayer: any = null
+        let localMultiplayer: { disconnect: () => void } | null = null
         const remotePlayers = remotePlayersRef.current
 
         const initGame = async () => {
@@ -139,10 +184,12 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                 const character = new CharacterModule.Character(
                                     localPlayerData.x,
                                     localPlayerData.y,
-                                    playerName
+                                    playerName,
+                                    localPlayerData.equipment
                                 )
                                 await character.init()
                                 characterRef.current = character
+                                setEquippedItems(localPlayerData.equipment || null)
                                 mapContainer.addChild(character.getContainer())
 
                                 // Center camera on character immediately
@@ -158,7 +205,8 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                                 player.id,
                                 player.x,
                                 player.y,
-                                player.name
+                                player.name,
+                                player.equipment
                             )
                             await remotePlayer.init()
                             mapContainer.addChild(remotePlayer.getContainer())
@@ -210,6 +258,19 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             } else {
                                 const remote = remotePlayersRef.current.get(data.id)
                                 if (remote) remote.setStatus(data.status)
+                            }
+                        },
+                        onPlayerEquipment: async (data) => {
+                            const localId = multiplayerRef.current?.getLocalPlayerId()
+                            if (data.playerId === localId) {
+                                setEquippedItems(data.equipment)
+                                await characterRef.current?.setEquipment(data.equipment)
+                                return
+                            }
+
+                            const remote = remotePlayersRef.current.get(data.playerId)
+                            if (remote) {
+                                await remote.setEquipment(data.equipment)
                             }
                         },
                         onInitialChests: (chests) => {
@@ -373,11 +434,69 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                         onRankingUpdate: (rankingData) => {
                             setRanking(rankingData)
                         },
+                        onWorldMessage: (message) => {
+                            setWorldMessages((prev) => [message, ...prev].slice(0, 100))
+                        },
                     })
 
                     multiplayer.connect(playerName)
                     multiplayerRef.current = multiplayer
                     localMultiplayer = multiplayer
+                }
+
+                // Load item catalog / equipment / inventory (authenticated users)
+                try {
+                    const { authAPI, gameAPI, playerAPI, shopAPI } = await import('../services/api')
+                    const catalogResult = await gameAPI.getItemCatalog()
+                    if (catalogResult.success && Array.isArray(catalogResult.items)) {
+                        setItemCatalog(mapServerCatalogToFrontend(catalogResult.items))
+                    }
+                    const worldMessageResult = await gameAPI.getWorldMessages(50)
+                    if (worldMessageResult.success && Array.isArray(worldMessageResult.messages)) {
+                        setWorldMessages(worldMessageResult.messages as WorldMessageData[])
+                    }
+
+                    const token = localStorage.getItem('token')
+                    if (token) {
+                        const storedUser = localStorage.getItem('user')
+                        if (storedUser) {
+                            try {
+                                const parsedUser = JSON.parse(storedUser) as { totalScore?: number }
+                                if (typeof parsedUser.totalScore === 'number') {
+                                    setPlayerScore(parsedUser.totalScore)
+                                }
+                            } catch {
+                                // ignore malformed user cache
+                            }
+                        }
+
+                        const equipmentResult = await playerAPI.getEquipment()
+                        if (equipmentResult.success && equipmentResult.equipment) {
+                            const nextEquipment = equipmentResult.equipment as PlayerEquipment
+                            setEquippedItems(nextEquipment)
+                            await characterRef.current?.setEquipment(nextEquipment)
+                        }
+
+                        const inventoryResult = await playerAPI.getInventory()
+                        if (inventoryResult.success && Array.isArray(inventoryResult.inventory)) {
+                            setInventory(inventoryResult.inventory as string[])
+                        }
+
+                        if (itemCatalog.length === 0) {
+                            const shopItemsResult = await shopAPI.getItems()
+                            if (shopItemsResult.success && Array.isArray(shopItemsResult.items)) {
+                                setItemCatalog(mapServerCatalogToFrontend(shopItemsResult.items))
+                            }
+                        }
+
+                        const me = await authAPI.me()
+                        if (me.success && me.user && typeof me.user.totalScore === 'number') {
+                            setPlayerScore(me.user.totalScore)
+                            localStorage.setItem('user', JSON.stringify(me.user))
+                        }
+                    }
+                } catch {
+                    // guest mode: keep default equipment (set 1)
                 }
 
                 // Don't center camera here - wait for character spawn
@@ -445,6 +564,72 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         setShowEmojiPicker(false)
     }
 
+    const handleEquipItem = async (slot: 'head' | 'armor' | 'foot', itemId: string | null) => {
+        if (!localStorage.getItem('token')) {
+            setNotification('ログイン後に装備変更できます')
+            setTimeout(() => setNotification(null), 1800)
+            return
+        }
+        try {
+            const { playerAPI } = await import('../services/api')
+            const nextEquipment = { ...(equippedItems || {}), [slot]: itemId }
+            const result = await playerAPI.updateEquipment(nextEquipment)
+            if (result.success && result.equipment) {
+                const updated = result.equipment as PlayerEquipment
+                setEquippedItems(updated)
+                await characterRef.current?.setEquipment(updated)
+                setNotification('装備を変更しました')
+                setTimeout(() => setNotification(null), 1800)
+            } else {
+                setNotification(result.error || '装備変更に失敗しました')
+                setTimeout(() => setNotification(null), 1800)
+            }
+        } catch {
+            setNotification('装備変更に失敗しました')
+            setTimeout(() => setNotification(null), 1800)
+        }
+    }
+
+    const handlePurchaseItem = async (itemId: string) => {
+        if (!localStorage.getItem('token')) {
+            setNotification('ログイン後に購入できます')
+            setTimeout(() => setNotification(null), 1800)
+            return
+        }
+
+        try {
+            const { shopAPI, authAPI } = await import('../services/api')
+            const result = await shopAPI.purchase(itemId)
+            if (result.success) {
+                if (Array.isArray(result.inventory)) {
+                    setInventory(result.inventory as string[])
+                }
+
+                // Refresh user profile so current score is synced after spending points.
+                try {
+                    const me = await authAPI.me()
+                    if (me.success && me.user) {
+                        localStorage.setItem('user', JSON.stringify(me.user))
+                        if (typeof me.user.totalScore === 'number') {
+                            setPlayerScore(me.user.totalScore)
+                        }
+                    }
+                } catch {
+                    // ignore profile refresh errors
+                }
+
+                setNotification('購入しました')
+                setTimeout(() => setNotification(null), 1800)
+            } else {
+                setNotification(result.error || '購入に失敗しました')
+                setTimeout(() => setNotification(null), 1800)
+            }
+        } catch {
+            setNotification('購入に失敗しました')
+            setTimeout(() => setNotification(null), 1800)
+        }
+    }
+
     // Handle question answer submission (chest or boss)
     const handleSubmitAnswer = (answer: string) => {
         if (multiplayerRef.current && questionData) {
@@ -491,6 +676,17 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 setShowEmojiPicker={setShowEmojiPicker}
                 notification={notification}
                 onEmojiSelect={handleEmojiSelect}
+                showInventory={showInventory}
+                setShowInventory={setShowInventory}
+                showShop={showShop}
+                setShowShop={setShowShop}
+                itemCatalog={itemCatalog}
+                inventory={inventory}
+                equippedItems={equippedItems}
+                playerScore={playerScore}
+                worldMessages={worldMessages}
+                onEquipItem={handleEquipItem}
+                onPurchaseItem={handlePurchaseItem}
             />
 
             <GameOverlays

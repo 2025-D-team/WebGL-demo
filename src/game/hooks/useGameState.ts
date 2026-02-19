@@ -6,8 +6,9 @@ import { BossEntity } from '../BossEntity'
 import { Character } from '../Character'
 import { ChestEntity } from '../ChestEntity'
 import { InputHandler } from '../InputHandler'
-import { MultiplayerManager, type RankingPlayer } from '../MultiplayerManager'
+import { MultiplayerManager, type RankingPlayer, type WorldMessageData } from '../MultiplayerManager'
 import { RemotePlayer } from '../RemotePlayer'
+import { type CatalogEquipmentItem, type PlayerEquipment } from '../equipment/types'
 
 /**
  * Hook to manage all game state and refs
@@ -49,6 +50,13 @@ export const useGameState = () => {
         timeLimit: number
     } | null>(null)
     const [isGrading, setIsGrading] = useState(false)
+    const [showInventory, setShowInventory] = useState(false)
+    const [showShop, setShowShop] = useState(false)
+    const [itemCatalog, setItemCatalog] = useState<CatalogEquipmentItem[]>([])
+    const [inventory, setInventory] = useState<string[]>([])
+    const [equippedItems, setEquippedItems] = useState<PlayerEquipment | null>(null)
+    const [playerScore, setPlayerScore] = useState<number | null>(null)
+    const [worldMessages, setWorldMessages] = useState<WorldMessageData[]>([])
 
     // Game ready state
     const [characterReady, setCharacterReady] = useState(false)
@@ -84,6 +92,20 @@ export const useGameState = () => {
         setQuestionData,
         isGrading,
         setIsGrading,
+        showInventory,
+        setShowInventory,
+        showShop,
+        setShowShop,
+        itemCatalog,
+        setItemCatalog,
+        inventory,
+        setInventory,
+        equippedItems,
+        setEquippedItems,
+        playerScore,
+        setPlayerScore,
+        worldMessages,
+        setWorldMessages,
         characterReady,
         setCharacterReady,
     }

@@ -4,6 +4,8 @@
  */
 import axios from 'axios'
 
+import { type PlayerEquipment } from '../game/equipment/types'
+
 const API_BASE_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:4000'
 
 // Create axios instance
@@ -112,6 +114,52 @@ export const gameAPI = {
         const response = await api.get(`/api/game/boss-spawns?map=${mapId}`)
         return response.data
     },
+
+    /**
+     * Get item catalog for equipment/shop
+     */
+    getItemCatalog: async () => {
+        const response = await api.get('/api/game/item-catalog')
+        return response.data
+    },
+
+    /**
+     * Get recent world messages for chat-like panel
+     */
+    getWorldMessages: async (limit = 50) => {
+        const response = await api.get(`/api/game/world-messages?limit=${limit}`)
+        return response.data
+    },
+}
+
+// =====================================================
+// PLAYER API
+// =====================================================
+
+export const playerAPI = {
+    /**
+     * Get equipped items for current authenticated player
+     */
+    getEquipment: async () => {
+        const response = await api.get('/api/player/equipment')
+        return response.data
+    },
+
+    /**
+     * Update equipped items for current authenticated player
+     */
+    updateEquipment: async (equipment: PlayerEquipment) => {
+        const response = await api.put('/api/player/equipment', equipment)
+        return response.data
+    },
+
+    /**
+     * Get owned item ids
+     */
+    getInventory: async () => {
+        const response = await api.get('/api/player/inventory')
+        return response.data
+    },
 }
 
 // =====================================================
@@ -146,8 +194,28 @@ export const adminAPI = {
     /**
      * Update a chest spawn
      */
-    updateChest: async (id: number, data: { x?: number; y?: number; rarity?: string; isActive?: boolean }) => {
+    updateChest: async (
+        id: number,
+        data: {
+            x?: number
+            y?: number
+            rarity?: string
+            isActive?: boolean
+            title?: string
+            question?: string
+            hints?: string[]
+            expectedAnswer?: string
+        }
+    ) => {
         const response = await api.put(`/api/admin/chests/${id}`, data)
+        return response.data
+    },
+
+    /**
+     * Get one chest detail by id
+     */
+    getChestById: async (id: number) => {
+        const response = await api.get(`/api/admin/chests/${id}`)
         return response.data
     },
 
@@ -251,11 +319,14 @@ export const adminBossAPI = {
     createSpawn: async (data: {
         x: number
         y: number
+        spawnDelaySeconds?: number
+        availableFrom?: string
         bossTemplateId?: number
         newBoss?: {
             name: string
             description?: string
             timeLimitSeconds?: number
+            spawnDelaySeconds?: number
             questions: Array<{
                 title: string
                 description: string
@@ -316,6 +387,28 @@ export const adminBossAPI = {
         }
     }) => {
         const response = await api.post('/api/admin/boss-questions/generate', data)
+        return response.data
+    },
+}
+
+// =====================================================
+// SHOP API
+// =====================================================
+
+export const shopAPI = {
+    /**
+     * Get shop items
+     */
+    getItems: async () => {
+        const response = await api.get('/api/shop/items')
+        return response.data
+    },
+
+    /**
+     * Purchase one item by id
+     */
+    purchase: async (itemId: string) => {
+        const response = await api.post('/api/shop/purchase', { itemId })
         return response.data
     },
 }

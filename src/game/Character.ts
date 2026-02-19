@@ -2,13 +2,18 @@ import * as PIXI from 'pixi.js'
 
 import { GameConfig } from '../config/gameConfig'
 import { LoadingIndicator } from './LoadingIndicator'
+import { EquipmentLayer } from './equipment/EquipmentService'
+import { type PlayerEquipment } from './equipment/types'
 
 type Direction = 'down' | 'up' | 'left' | 'right'
 
 export class Character {
     private container: PIXI.Container
+    private avatarLayer: PIXI.Container
+    private uiLayer: PIXI.Container
     private currentSprite: PIXI.AnimatedSprite | null = null
     private animations: Map<Direction, PIXI.AnimatedSprite> = new Map()
+    private equipmentLayer: EquipmentLayer
     private currentDirection: Direction = 'down'
     private isMoving: boolean = false
     private speed: number = GameConfig.character.speed
@@ -22,16 +27,26 @@ export class Character {
     private loadingIndicator: LoadingIndicator
     private status: 'idle' | 'busy' = 'idle'
 
-    constructor(x: number, y: number, name?: string) {
+    constructor(x: number, y: number, name?: string, equipment?: PlayerEquipment) {
         this.container = new PIXI.Container()
+        this.avatarLayer = new PIXI.Container()
+        this.avatarLayer.sortableChildren = true
+        this.uiLayer = new PIXI.Container()
+        this.container.addChild(this.avatarLayer)
+        this.container.addChild(this.uiLayer)
         this.position = { x, y }
         this.container.x = x
         this.container.y = y
 
+        this.equipmentLayer = new EquipmentLayer(equipment)
+        const equipmentContainer = this.equipmentLayer.getContainer()
+        equipmentContainer.zIndex = 30
+        this.avatarLayer.addChild(equipmentContainer)
+
         // Initialize loading indicator
         this.loadingIndicator = new LoadingIndicator()
         this.loadingIndicator.setPosition(0, -GameConfig.character.size - 30)
-        this.container.addChild(this.loadingIndicator.getContainer())
+        this.uiLayer.addChild(this.loadingIndicator.getContainer())
 
         if (name !== undefined) {
             const display = name && name.trim().length > 0 ? name.trim() : ''
@@ -52,7 +67,7 @@ export class Character {
                 bg.x = ox
                 bg.y = -GameConfig.character.size - 5 + oy
                 bg.resolution = 2
-                this.container.addChild(bg)
+                this.uiLayer.addChild(bg)
                 this.nameBgTexts.push(bg)
             }
 
@@ -60,7 +75,7 @@ export class Character {
             this.nameText.anchor.set(0.5, 1)
             this.nameText.y = -GameConfig.character.size - 5
             this.nameText.resolution = 2
-            this.container.addChild(this.nameText)
+            this.uiLayer.addChild(this.nameText)
         }
     }
 
@@ -99,7 +114,7 @@ export class Character {
         // Position slightly above the name / head
         txt.y = -GameConfig.character.size - 25
         txt.resolution = 2
-        this.container.addChild(txt)
+        this.uiLayer.addChild(txt)
         this.emojiText = txt
 
         // Auto-remove after duration
@@ -117,6 +132,7 @@ export class Character {
 
         // Set initial sprite (walkdown frame 0 as idle)
         this.setDirection('down', false)
+        await this.equipmentLayer.setDirection('down')
     }
 
     private async loadAnimations() {
@@ -196,7 +212,7 @@ export class Character {
 
         // Remove current sprite
         if (this.currentSprite) {
-            this.container.removeChild(this.currentSprite)
+            this.avatarLayer.removeChild(this.currentSprite)
             this.currentSprite.stop()
         }
 
@@ -204,7 +220,8 @@ export class Character {
         const sprite = this.animations.get(direction)
         if (sprite) {
             this.currentSprite = sprite
-            this.container.addChild(sprite)
+            sprite.zIndex = 20
+            this.avatarLayer.addChild(sprite)
 
             if (moving) {
                 sprite.play()
@@ -212,7 +229,13 @@ export class Character {
                 // Set to frame 0 (idle)
                 sprite.gotoAndStop(0)
             }
+
+            void this.equipmentLayer.setDirection(direction)
         }
+    }
+
+    async setEquipment(equipment?: PlayerEquipment) {
+        await this.equipmentLayer.setEquipment(equipment)
     }
 
     move(
@@ -291,5 +314,14 @@ export class Character {
 
     getCurrentDirection(): Direction {
         return this.currentDirection
+    }
+
+    destroy(): void {
+        this.equipmentLayer.destroy()
+        this.currentSprite?.destroy()
+        this.nameText?.destroy()
+        this.nameBgTexts.forEach((t) => t.destroy())
+        this.emojiText?.destroy()
+        this.container.destroy()
     }
 }

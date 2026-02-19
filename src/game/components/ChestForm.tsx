@@ -13,6 +13,13 @@ interface ChestFormProps {
     onSave: (data: ChestFormData) => void
     onClose: () => void
     isSaving?: boolean
+    mode?: 'create' | 'edit'
+    initialData?: {
+        title?: string
+        question?: string
+        hints?: string[]
+        expectedAnswer?: string
+    }
 }
 
 export interface ChestFormData {
@@ -24,12 +31,21 @@ export interface ChestFormData {
     expectedAnswer: string
 }
 
-export const ChestForm = ({ rarity, position, difficulty, onSave, onClose, isSaving = false }: ChestFormProps) => {
-    const [title, setTitle] = useState('')
-    const [question, setQuestion] = useState('')
+export const ChestForm = ({
+    rarity,
+    position,
+    difficulty,
+    onSave,
+    onClose,
+    isSaving = false,
+    mode = 'create',
+    initialData,
+}: ChestFormProps) => {
+    const [title, setTitle] = useState(initialData?.title || '')
+    const [question, setQuestion] = useState(initialData?.question || '')
     const [hintInput, setHintInput] = useState('')
-    const [hints, setHints] = useState<string[]>([])
-    const [expectedAnswer, setExpectedAnswer] = useState('')
+    const [hints, setHints] = useState<string[]>(initialData?.hints || [])
+    const [expectedAnswer, setExpectedAnswer] = useState(initialData?.expectedAnswer || '')
     const [showTooltip, setShowTooltip] = useState(false)
 
     const rarityLabels: Record<string, string> = {
@@ -82,7 +98,7 @@ export const ChestForm = ({ rarity, position, difficulty, onSave, onClose, isSav
         <div className='chest-form-overlay'>
             <div className='chest-form-modal'>
                 <div className='form-header'>
-                    <h2>📦 宝箱の詳細</h2>
+                    <h2>{mode === 'edit' ? '✏️ 宝箱を編集' : '📦 宝箱の詳細'}</h2>
                     <button
                         className='btn-close'
                         onClick={onClose}
@@ -224,7 +240,7 @@ export const ChestForm = ({ rarity, position, difficulty, onSave, onClose, isSav
                             className='btn-submit'
                             disabled={isSaving}
                         >
-                            {isSaving ? '保存中...' : '保存'}
+                            {isSaving ? '保存中...' : mode === 'edit' ? '更新' : '保存'}
                         </button>
                     </div>
                 </form>

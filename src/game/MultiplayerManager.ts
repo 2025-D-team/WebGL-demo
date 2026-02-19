@@ -1,6 +1,7 @@
 import { Socket, io } from 'socket.io-client'
 
 import { GameConfig } from '../config/gameConfig'
+import { type PlayerEquipment } from './equipment/types'
 
 export interface PlayerData {
     id: string
@@ -9,6 +10,7 @@ export interface PlayerData {
     y: number
     direction: 'down' | 'up' | 'left' | 'right'
     isMoving?: boolean
+    equipment?: PlayerEquipment
 }
 
 export interface ChestData {
@@ -26,6 +28,14 @@ export interface RankingPlayer {
     score: number
 }
 
+export interface WorldMessageData {
+    id: number
+    message_type: 'chest_spawned' | 'boss_spawned'
+    message_text: string
+    color_hex: string
+    created_at: string
+}
+
 export interface MultiplayerCallbacks {
     onGameInit?: (data: { playerId: string; players: PlayerData[]; chests?: ChestData[] }) => void
     onPlayerJoined?: (player: PlayerData) => void
@@ -34,6 +44,7 @@ export interface MultiplayerCallbacks {
     onPlayerUpdated?: (player: PlayerData) => void
     onPlayerEmoji?: (data: { id: string; emoji: string; duration: number }) => void
     onPlayerStatus?: (data: { id: string; status: 'idle' | 'busy' }) => void
+    onPlayerEquipment?: (data: { playerId: string; equipment: PlayerEquipment }) => void
     onInitialChests?: (chests: ChestData[]) => void
     onChestAppear?: (chests: ChestData[]) => void
     onChestDisappear?: (chestIds: string[]) => void
@@ -47,6 +58,7 @@ export interface MultiplayerCallbacks {
             currentHp?: number
             timeLimitSeconds: number
             templateId: number
+            availableFrom?: string
         }>
     ) => void
     onChestUpdate?: (chest: ChestData) => void
@@ -75,6 +87,7 @@ export interface MultiplayerCallbacks {
         attackerId: string
         attackerName: string
     }) => void
+    onWorldMessage?: (message: WorldMessageData) => void
 }
 
 export class MultiplayerManager {
@@ -182,6 +195,11 @@ export class MultiplayerManager {
             this.callbacks.onPlayerLeft?.(data.id)
         })
 
+        this.socket.on('player:equipment', (data: { playerId: string; equipment: PlayerEquipment }) => {
+            console.log('🧩 Player equipment changed:', data.playerId, data.equipment)
+            this.callbacks.onPlayerEquipment?.(data)
+        })
+
         // Chest visibility events
         this.socket.on('entity:appear', (data: { chests: ChestData[] }) => {
             console.log('📦 Chests appeared:', data.chests.length)
@@ -205,6 +223,7 @@ export class MultiplayerManager {
                     maxHp: number
                     timeLimitSeconds: number
                     templateId: number
+                    availableFrom?: string
                 }>
             }) => {
                 console.log('👹 Boss spawns updated:', data.bosses.length)
@@ -289,6 +308,10 @@ export class MultiplayerManager {
                 this.callbacks.onBossDamaged?.(data)
             }
         )
+
+        this.socket.on('world:message', (message: WorldMessageData) => {
+            this.callbacks.onWorldMessage?.(message)
+        })
     }
 
     // Allow setting/updating the local player's name after connection
