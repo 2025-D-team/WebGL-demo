@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+import { gameAPI } from '../services/api'
 
 interface RankingPlayer {
     id: string
     name: string
     score: number
+    isBot?: boolean
 }
 
 interface RankingProps {
@@ -11,39 +14,81 @@ interface RankingProps {
     localPlayerId: string | null
 }
 
+type RankingTab = 'online' | 'alltime'
+
 export const Ranking = ({ players, localPlayerId }: RankingProps) => {
-    const [isExpanded, setIsExpanded] = useState(true)
+    const [isExpanded, setIsExpanded] = useState(false)
+    const [activeTab, setActiveTab] = useState<RankingTab>('online')
+    const [allTimePlayers, setAllTimePlayers] = useState<RankingPlayer[]>([])
 
-    // Truncate long names
-    const truncateName = (name: string, maxLength = 8) => {
-        if (name.length <= maxLength) return name
-        return name.substring(0, maxLength) + '...'
-    }
+    const sortedOnlinePlayers = useMemo(() => {
+        return [...players].sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score
+            return players.indexOf(a) - players.indexOf(b)
+        })
+    }, [players])
 
-    // Sort players by score (descending), if same score then by order in array (first come, first served)
-    const sortedPlayers = [...players].sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score
-        return players.indexOf(a) - players.indexOf(b)
-    })
+    const allTimeSorted = useMemo(
+        () => [...allTimePlayers].sort((a, b) => b.score - a.score),
+        [allTimePlayers]
+    )
 
-    // Get top 8 players
-    const top8 = sortedPlayers.slice(0, 8)
+    const onlineDisplayState = useMemo(() => {
+        const top8 = sortedOnlinePlayers.slice(0, 8)
+        const localPlayerIndex = sortedOnlinePlayers.findIndex((p) => p.id === localPlayerId)
+        const localPlayerRank = localPlayerIndex + 1
+        const isLocalPlayerInTop8 = localPlayerIndex >= 0 && localPlayerIndex < 8
+        const localPlayerData = localPlayerIndex >= 0 ? sortedOnlinePlayers[localPlayerIndex] : null
 
-    // Find local player's rank and data
-    const localPlayerIndex = sortedPlayers.findIndex((p) => p.id === localPlayerId)
-    const localPlayerRank = localPlayerIndex + 1
-    const isLocalPlayerInTop8 = localPlayerIndex < 8 && localPlayerIndex >= 0
-    const localPlayerData = localPlayerIndex >= 0 ? sortedPlayers[localPlayerIndex] : null
+        let displayPlayers = top8
+        let showSeparator = false
+        if (localPlayerData && !isLocalPlayerInTop8) {
+            displayPlayers = [...top8, localPlayerData]
+            showSeparator = true
+        }
 
-    // Determine what to display
-    let displayPlayers = top8
-    let showSeparator = false
+        return {
+            displayPlayers,
+            showSeparator,
+            isLocalPlayerInTop8,
+            localPlayerRank,
+            totalOnline: sortedOnlinePlayers.length,
+        }
+    }, [localPlayerId, sortedOnlinePlayers])
 
-    if (localPlayerData && !isLocalPlayerInTop8) {
-        // Local player is outside top 8, show them at the bottom with separator
-        displayPlayers = [...top8, localPlayerData]
-        showSeparator = true
-    }
+    useEffect(() => {
+        let mounted = true
+        const fetchAllTime = async () => {
+            try {
+                const result = await gameAPI.getLeaderboardAllTime()
+                if (!mounted) return
+                if (result.success && Array.isArray(result.ranking)) {
+                    setAllTimePlayers(result.ranking as RankingPlayer[])
+                }
+            } catch {
+                // Keep current list on transient errors.
+            }
+        }
+
+        fetchAllTime()
+        return () => {
+            mounted = false
+        }
+    }, [])
+
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            try {
+                const result = await gameAPI.getLeaderboardAllTime()
+                if (result.success && Array.isArray(result.ranking)) {
+                    setAllTimePlayers(result.ranking as RankingPlayer[])
+                }
+            } catch {
+                // Ignore refresh failures.
+            }
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [players])
 
     return (
         <div
@@ -52,224 +97,204 @@ export const Ranking = ({ players, localPlayerId }: RankingProps) => {
                 top: 20,
                 right: 20,
                 zIndex: 9998,
-                background: 'rgba(255, 255, 255, 0.95)',
+                width: 330,
                 borderRadius: 12,
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
                 overflow: 'hidden',
-                minWidth: 240,
-                border: '1px solid rgba(0, 0, 0, 0.1)',
+                border: '1px solid rgba(252, 211, 77, 0.45)',
+                boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
+                background: 'linear-gradient(180deg, rgba(15,23,42,0.97) 0%, rgba(2,6,23,0.98) 100%)',
+                color: '#e2e8f0',
             }}
         >
-            {/* Header */}
-            <div
-                onClick={() => setIsExpanded(!isExpanded)}
+            <button
+                onClick={() => setIsExpanded((v) => !v)}
                 style={{
-                    padding: '12px 16px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    fontWeight: 'bold',
+                    width: '100%',
+                    padding: '12px 14px',
+                    border: 'none',
+                    background: 'linear-gradient(180deg, rgba(250,204,21,0.24) 0%, rgba(15,23,42,0) 100%)',
+                    color: '#fef3c7',
+                    fontWeight: 800,
                     fontSize: 14,
-                    cursor: 'pointer',
                     display: 'flex',
-                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    userSelect: 'none',
+                    justifyContent: 'space-between',
+                    letterSpacing: 0.5,
+                    cursor: 'pointer',
                 }}
             >
-                <span>🏆 世界ランキング</span>
-                <span style={{ fontSize: 18 }}>{isExpanded ? '▼' : '▶'}</span>
-            </div>
+                <span>世界ランキング</span>
+                <span style={{ color: '#fcd34d', fontSize: 16 }}>{isExpanded ? '▾' : '▸'}</span>
+            </button>
 
-            {/* Player List */}
             {isExpanded && (
-                <div
-                    style={{
-                        maxHeight: 500,
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
-                    }}
-                >
-                    {players.length === 0 ?
-                        <div
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', padding: 8, gap: 8 }}>
+                        <button
+                            onClick={() => setActiveTab('online')}
                             style={{
-                                padding: '20px',
-                                textAlign: 'center',
-                                color: '#999',
-                                fontSize: 13,
+                                height: 34,
+                                borderRadius: 8,
+                                border: '1px solid rgba(148,163,184,0.35)',
+                                background:
+                                    activeTab === 'online' ?
+                                        'linear-gradient(180deg, rgba(56,189,248,0.35), rgba(30,41,59,0.9))'
+                                    :   'rgba(255,255,255,0.04)',
+                                color: activeTab === 'online' ? '#e0f2fe' : '#cbd5e1',
+                                fontWeight: 700,
+                                cursor: 'pointer',
                             }}
                         >
-                            オンラインプレイヤーなし
-                        </div>
-                    :   <>
-                            {displayPlayers.map((player, displayIndex) => {
-                                // Calculate actual rank
-                                const actualRank =
-                                    player.id === localPlayerId && !isLocalPlayerInTop8 ?
-                                        localPlayerRank
-                                    :   displayIndex + 1
+                            オンライン
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('alltime')}
+                            style={{
+                                height: 34,
+                                borderRadius: 8,
+                                border: '1px solid rgba(148,163,184,0.35)',
+                                background:
+                                    activeTab === 'alltime' ?
+                                        'linear-gradient(180deg, rgba(250,204,21,0.28), rgba(30,41,59,0.9))'
+                                    :   'rgba(255,255,255,0.04)',
+                                color: activeTab === 'alltime' ? '#fef3c7' : '#cbd5e1',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            全期間
+                        </button>
+                    </div>
 
-                                // Check if we need to show separator before this player
-                                const needsSeparator = showSeparator && displayIndex === 8
-
-                                return (
-                                    <div key={player.id}>
-                                        {/* Separator for out-of-top-10 player */}
-                                        {needsSeparator && (
-                                            <div
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    gap: 4,
-                                                }}
-                                            >
-                                                <hr
-                                                    style={{
-                                                        border: 'none',
-                                                        borderTop: '1px dashed rgba(0, 0, 0, 0.2)',
-                                                        margin: 0,
-                                                        width: '100%',
-                                                    }}
-                                                />
-                                                <hr
-                                                    style={{
-                                                        border: 'none',
-                                                        borderTop: '1px dashed rgba(0, 0, 0, 0.2)',
-                                                        margin: 0,
-                                                        width: '100%',
-                                                    }}
-                                                />
-                                            </div>
-                                        )}
-
-                                        <div
-                                            style={{
-                                                padding: '10px 16px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 12,
-                                                borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-                                                background:
-                                                    player.id === localPlayerId ?
-                                                        'rgba(102, 126, 234, 0.1)'
-                                                    :   'transparent',
-                                                transition: 'background 0.2s',
-                                            }}
-                                        >
-                                            {/* Rank Number */}
-                                            <div
-                                                style={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: 12,
-                                                    fontWeight: 'bold',
-                                                    color: actualRank <= 3 ? '#ffd700' : '#666',
-                                                }}
-                                            >
-                                                {actualRank}
-                                            </div>
-
-                                            {/* Avatar */}
-                                            <div
-                                                style={{
-                                                    width: 32,
-                                                    height: 32,
-                                                    borderRadius: '50%',
-                                                    background: '#fff',
-                                                    border: '2px solid #ddd',
-                                                    position: 'relative',
-                                                }}
-                                            >
-                                                {/* Online Dot */}
+                    {activeTab === 'online' ?
+                        <div style={{ maxHeight: 390, overflowY: 'auto', padding: '0 8px 8px 8px' }}>
+                            {onlineDisplayState.totalOnline === 0 ?
+                                <div style={{ padding: 16, textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
+                                    オンラインプレイヤーなし
+                                </div>
+                            :   <>
+                                    {onlineDisplayState.displayPlayers.map((player, displayIndex) => {
+                                        const actualRank =
+                                            player.id === localPlayerId && !onlineDisplayState.isLocalPlayerInTop8 ?
+                                                onlineDisplayState.localPlayerRank
+                                            :   displayIndex + 1
+                                        const needsSeparator = onlineDisplayState.showSeparator && displayIndex === 8
+                                        return (
+                                            <div key={`${player.id}-${displayIndex}`}>
+                                                {needsSeparator && (
+                                                    <div
+                                                        style={{
+                                                            margin: '6px 4px',
+                                                            borderTop: '1px dashed rgba(148,163,184,0.45)',
+                                                        }}
+                                                    />
+                                                )}
                                                 <div
                                                     style={{
-                                                        position: 'absolute',
-                                                        bottom: 0,
-                                                        right: 0,
-                                                        width: 10,
-                                                        height: 10,
-                                                        borderRadius: '50%',
-                                                        background: '#00ff00',
-                                                        border: '2px solid white',
+                                                        height: 36,
+                                                        borderRadius: 8,
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '34px 1fr auto',
+                                                        alignItems: 'center',
+                                                        gap: 8,
+                                                        padding: '0 10px',
+                                                        marginBottom: 6,
+                                                        background:
+                                                            player.id === localPlayerId ?
+                                                                'rgba(56,189,248,0.18)'
+                                                            :   'rgba(15,23,42,0.45)',
+                                                        border:
+                                                            player.id === localPlayerId ?
+                                                                '1px solid rgba(56,189,248,0.55)'
+                                                            :   '1px solid rgba(148,163,184,0.25)',
                                                     }}
-                                                />
+                                                >
+                                                    <span
+                                                        style={{
+                                                            fontWeight: 800,
+                                                            color: actualRank <= 3 ? '#fcd34d' : '#cbd5e1',
+                                                        }}
+                                                    >
+                                                        {actualRank}.
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap',
+                                                            fontWeight: 600,
+                                                        }}
+                                                    >
+                                                        {player.name}
+                                                    </span>
+                                                    <span style={{ color: '#7dd3fc', fontWeight: 800 }}>
+                                                        {player.score}
+                                                    </span>
+                                                </div>
                                             </div>
+                                        )
+                                    })}
 
-                                            {/* Name */}
-                                            <div
-                                                style={{
-                                                    flex: 1,
-                                                    fontSize: 13,
-                                                    fontWeight: player.id === localPlayerId ? 'bold' : '500',
-                                                    color: '#333',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                }}
-                                            >
-                                                {truncateName(player.name)}
-                                            </div>
-
-                                            {/* Score */}
-                                            <div
-                                                style={{
-                                                    fontSize: 14,
-                                                    fontWeight: 'bold',
-                                                    color: '#667eea',
-                                                }}
-                                            >
-                                                {player.score}
-                                            </div>
+                                    {onlineDisplayState.isLocalPlayerInTop8 && onlineDisplayState.totalOnline > 8 && (
+                                        <div
+                                            style={{
+                                                marginTop: 2,
+                                                padding: '8px 10px',
+                                                fontSize: 12,
+                                                color: '#94a3b8',
+                                                borderTop: '1px dashed rgba(148,163,184,0.45)',
+                                                textAlign: 'center',
+                                            }}
+                                        >
+                                            合計 {onlineDisplayState.totalOnline} 人がオンライン
                                         </div>
-                                    </div>
-                                )
-                            })}
-
-                            {/* Show online count if local player is in top 8 */}
-                            {isLocalPlayerInTop8 && players.length > 8 && (
-                                <div>
-                                    <div
-                                        style={{
-                                            padding: '8px 16px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: 4,
-                                        }}
-                                    >
-                                        <hr
-                                            style={{
-                                                border: 'none',
-                                                borderTop: '1px dashed rgba(0, 0, 0, 0.2)',
-                                                margin: 0,
-                                                width: '100%',
-                                            }}
-                                        />
-                                        <hr
-                                            style={{
-                                                border: 'none',
-                                                borderTop: '1px dashed rgba(0, 0, 0, 0.2)',
-                                                margin: 0,
-                                                width: '100%',
-                                            }}
-                                        />
-                                    </div>
-                                    <div
-                                        style={{
-                                            padding: '10px 16px',
-                                            textAlign: 'center',
-                                            fontSize: 12,
-                                            color: '#999',
-                                            fontStyle: 'italic',
-                                        }}
-                                    >
-                                        合計 {players.length} 人がオンライン
-                                    </div>
+                                    )}
+                                </>
+                            }
+                        </div>
+                    :   <div style={{ maxHeight: 390, overflowY: 'auto', padding: '0 8px 8px 8px' }}>
+                            {allTimeSorted.length === 0 ?
+                                <div style={{ padding: 16, textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
+                                    データがありません
                                 </div>
-                            )}
-                        </>
+                            :   allTimeSorted.map((player, index) => (
+                                    <div
+                                        key={`${player.id}-${index}`}
+                                        style={{
+                                            height: 36,
+                                            borderRadius: 8,
+                                            display: 'grid',
+                                            gridTemplateColumns: '34px 1fr auto',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            padding: '0 10px',
+                                            marginBottom: 6,
+                                            background:
+                                                player.isBot ?
+                                                    'rgba(30,41,59,0.68)'
+                                                :   'rgba(15,23,42,0.45)',
+                                            border: '1px solid rgba(148,163,184,0.25)',
+                                        }}
+                                    >
+                                        <span style={{ fontWeight: 800, color: index < 3 ? '#fcd34d' : '#cbd5e1' }}>
+                                            {index + 1}.
+                                        </span>
+                                        <span
+                                            style={{
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                fontWeight: 600,
+                                                color: player.isBot ? '#fef3c7' : '#e2e8f0',
+                                            }}
+                                        >
+                                            {player.name}
+                                        </span>
+                                        <span style={{ color: '#fcd34d', fontWeight: 800 }}>{player.score}</span>
+                                    </div>
+                                ))
+                            }
+                        </div>
                     }
                 </div>
             )}

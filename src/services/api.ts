@@ -56,8 +56,8 @@ export const authAPI = {
     /**
      * Login user
      */
-    login: async (username: string, password: string) => {
-        const response = await api.post('/api/auth/login', { username, password })
+    login: async (identifier: string, password: string) => {
+        const response = await api.post('/api/auth/login', { identifier, password })
         return response.data
     },
 
@@ -82,6 +82,14 @@ export const authAPI = {
      */
     changePassword: async (oldPassword: string, newPassword: string) => {
         const response = await api.put('/api/auth/password', { oldPassword, newPassword })
+        return response.data
+    },
+
+    /**
+     * Update profile (username/email)
+     */
+    updateProfile: async (data: { username?: string; email?: string }) => {
+        const response = await api.put('/api/auth/profile', data)
         return response.data
     },
 
@@ -128,6 +136,14 @@ export const gameAPI = {
      */
     getWorldMessages: async (limit = 50) => {
         const response = await api.get(`/api/game/world-messages?limit=${limit}`)
+        return response.data
+    },
+
+    /**
+     * Get all-time leaderboard (persisted scores + demo bots)
+     */
+    getLeaderboardAllTime: async () => {
+        const response = await api.get('/api/game/leaderboard/alltime')
         return response.data
     },
 }

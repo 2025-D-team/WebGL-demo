@@ -13,7 +13,7 @@ export const Login: React.FC = () => {
     const { login, isAuthenticated, isAdmin, loading: authLoading } = useAuth()
     const navigate = useNavigate()
 
-    const [username, setUsername] = useState('')
+    const [identifier, setIdentifier] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
@@ -35,7 +35,7 @@ export const Login: React.FC = () => {
         setLoading(true)
 
         try {
-            const result = await login(username, password)
+            const result = await login(identifier, password)
 
             if (result.success) {
                 // Get user data from localStorage (just set by login)
@@ -77,16 +77,15 @@ export const Login: React.FC = () => {
                     {error && <div className='auth-error'>{error}</div>}
 
                     <div className='form-group'>
-                        <label htmlFor='username'>ユーザー名</label>
+                        <label htmlFor='identifier'>ユーザー名 / メール</label>
                         <input
-                            id='username'
+                            id='identifier'
                             type='text'
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            placeholder='ユーザー名を入力'
+                            value={identifier}
+                            onChange={(e) => setIdentifier(e.target.value)}
+                            placeholder='ユーザー名またはメールを入力'
                             required
-                            minLength={3}
-                            autoComplete='username'
+                            autoComplete='username email'
                             autoFocus
                         />
                     </div>
@@ -108,7 +107,7 @@ export const Login: React.FC = () => {
                     <button
                         type='submit'
                         className='auth-button'
-                        disabled={loading || !username || !password}
+                        disabled={loading || !identifier || !password}
                     >
                         {loading ? 'ログイン中...' : 'ログイン'}
                     </button>

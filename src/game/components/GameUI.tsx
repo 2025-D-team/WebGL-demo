@@ -17,8 +17,12 @@ interface GameUIProps {
     equippedItems: PlayerEquipment | null
     playerScore: number | null
     worldMessages: WorldMessageData[]
+    currentUsername: string
+    currentEmail: string
     onEquipItem: (slot: EquipmentSlot, itemId: string | null) => void
     onPurchaseItem: (itemId: string) => void
+    onLogout: () => void
+    onUpdateProfile: (data: { username: string; email: string }) => Promise<{ success: boolean; error?: string }>
 }
 
 const SLOT_LABELS: Record<EquipmentSlot, string> = {
@@ -49,11 +53,21 @@ export const GameUI = ({
     equippedItems,
     playerScore,
     worldMessages,
+    currentUsername,
+    currentEmail,
     onEquipItem,
     onPurchaseItem,
+    onLogout,
+    onUpdateProfile,
 }: GameUIProps) => {
     const [activeInventoryTab, setActiveInventoryTab] = useState<EquipmentSlot>('head')
     const [activeShopTab, setActiveShopTab] = useState<EquipmentSlot>('head')
+    const [showSettings, setShowSettings] = useState(false)
+    const [showProfileModal, setShowProfileModal] = useState(false)
+    const [profileUsername, setProfileUsername] = useState(currentUsername)
+    const [profileEmail, setProfileEmail] = useState(currentEmail)
+    const [profileError, setProfileError] = useState('')
+    const [profileSaving, setProfileSaving] = useState(false)
 
     const ownedItems = useMemo(() => {
         const ownedSet = new Set(inventory)
@@ -95,8 +109,59 @@ export const GameUI = ({
         return `${mm}/${dd} ${hh}:${min}`
     }
 
+    const openProfileModal = () => {
+        setProfileUsername(currentUsername)
+        setProfileEmail(currentEmail)
+        setProfileError('')
+        setShowProfileModal(true)
+        setShowSettings(false)
+    }
+
+    const handleSaveProfile = async () => {
+        setProfileError('')
+        setProfileSaving(true)
+        try {
+            const result = await onUpdateProfile({
+                username: profileUsername.trim(),
+                email: profileEmail.trim(),
+            })
+            if (result.success) {
+                setShowProfileModal(false)
+            } else {
+                setProfileError(result.error || '保存に失敗しました')
+            }
+        } catch {
+            setProfileError('保存に失敗しました')
+        } finally {
+            setProfileSaving(false)
+        }
+    }
+
     return (
         <>
+            <div style={{ position: 'absolute', left: 20, top: 20, zIndex: 9999 }}>
+                <button
+                    onClick={() => setShowSettings(true)}
+                    style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 10,
+                        border: '1px solid rgba(255,255,255,0.35)',
+                        background: 'linear-gradient(180deg, rgba(30,41,59,0.96), rgba(2,6,23,0.96))',
+                        display: 'grid',
+                        placeItems: 'center',
+                        padding: 0,
+                    }}
+                    title='設定'
+                >
+                    <img
+                        src='/icon/setting.png'
+                        alt='settings'
+                        style={{ width: 24, height: 24, objectFit: 'contain', imageRendering: 'pixelated' }}
+                    />
+                </button>
+            </div>
+
             <div
                 style={{
                     position: 'absolute',
@@ -250,6 +315,227 @@ export const GameUI = ({
                             {e}
                         </button>
                     ))}
+                </div>
+            )}
+
+            {showSettings && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(2,6,23,0.7)',
+                        backdropFilter: 'blur(2px)',
+                        zIndex: 10020,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}
+                    onClick={() => setShowSettings(false)}
+                >
+                    <div
+                        style={{
+                            width: 360,
+                            maxWidth: '92vw',
+                            background: 'linear-gradient(165deg, rgba(15,23,42,0.98) 0%, rgba(2,6,23,0.98) 100%)',
+                            border: '1px solid rgba(148,163,184,0.28)',
+                            boxShadow: '0 18px 40px rgba(0,0,0,0.45)',
+                            borderRadius: 14,
+                            padding: 18,
+                            color: '#e2e8f0',
+                            display: 'grid',
+                            gap: 14,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                borderBottom: '1px solid rgba(148,163,184,0.18)',
+                                paddingBottom: 10,
+                            }}
+                        >
+                            <strong style={{ fontSize: 16, letterSpacing: 0.3 }}>設定</strong>
+                            <button
+                                onClick={() => setShowSettings(false)}
+                                style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(148,163,184,0.35)',
+                                    background: 'rgba(30,41,59,0.7)',
+                                    color: '#cbd5e1',
+                                }}
+                            >
+                                ✖
+                            </button>
+                        </div>
+                        <button
+                            onClick={openProfileModal}
+                            style={{
+                                padding: '11px 12px',
+                                borderRadius: 10,
+                                border: '1px solid rgba(59,130,246,0.45)',
+                                background: 'linear-gradient(180deg, rgba(30,64,175,0.35), rgba(30,41,59,0.75))',
+                                color: '#dbeafe',
+                                textAlign: 'left',
+                                fontWeight: 600,
+                            }}
+                        >
+                            個人情報を変更
+                        </button>
+                        <button
+                            onClick={onLogout}
+                            style={{
+                                padding: '11px 12px',
+                                borderRadius: 10,
+                                border: '1px solid rgba(248,113,113,0.55)',
+                                background: 'linear-gradient(180deg, rgba(127,29,29,0.85), rgba(69,10,10,0.9))',
+                                color: '#fee2e2',
+                                textAlign: 'left',
+                                fontWeight: 700,
+                            }}
+                        >
+                            ログアウト
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {showProfileModal && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(2,6,23,0.72)',
+                        backdropFilter: 'blur(2px)',
+                        zIndex: 10021,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}
+                    onClick={() => setShowProfileModal(false)}
+                >
+                    <div
+                        style={{
+                            width: 420,
+                            maxWidth: '94vw',
+                            background: 'linear-gradient(165deg, rgba(15,23,42,0.99) 0%, rgba(2,6,23,0.99) 100%)',
+                            border: '1px solid rgba(148,163,184,0.28)',
+                            boxShadow: '0 20px 44px rgba(0,0,0,0.5)',
+                            borderRadius: 14,
+                            padding: 18,
+                            color: '#e2e8f0',
+                            display: 'grid',
+                            gap: 14,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                borderBottom: '1px solid rgba(148,163,184,0.18)',
+                                paddingBottom: 10,
+                            }}
+                        >
+                            <strong style={{ fontSize: 16, letterSpacing: 0.3 }}>個人情報変更</strong>
+                            <button
+                                onClick={() => setShowProfileModal(false)}
+                                style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(148,163,184,0.35)',
+                                    background: 'rgba(30,41,59,0.7)',
+                                    color: '#cbd5e1',
+                                }}
+                            >
+                                ✖
+                            </button>
+                        </div>
+                        <label style={{ display: 'grid', gap: 6 }}>
+                            <span style={{ fontSize: 12, color: '#94a3b8' }}>ユーザー名</span>
+                            <input
+                                value={profileUsername}
+                                onChange={(e) => setProfileUsername(e.target.value)}
+                                placeholder='ユーザー名'
+                                style={{
+                                    height: 38,
+                                    borderRadius: 9,
+                                    border: '1px solid rgba(148,163,184,0.3)',
+                                    background: 'rgba(15,23,42,0.75)',
+                                    color: '#e2e8f0',
+                                    padding: '0 10px',
+                                }}
+                            />
+                        </label>
+                        <label style={{ display: 'grid', gap: 6 }}>
+                            <span style={{ fontSize: 12, color: '#94a3b8' }}>メール</span>
+                            <input
+                                value={profileEmail}
+                                onChange={(e) => setProfileEmail(e.target.value)}
+                                placeholder='email@example.com'
+                                style={{
+                                    height: 38,
+                                    borderRadius: 9,
+                                    border: '1px solid rgba(148,163,184,0.3)',
+                                    background: 'rgba(15,23,42,0.75)',
+                                    color: '#e2e8f0',
+                                    padding: '0 10px',
+                                }}
+                            />
+                        </label>
+                        {profileError && (
+                            <div
+                                style={{
+                                    color: '#fecaca',
+                                    fontSize: 12,
+                                    background: 'rgba(127,29,29,0.35)',
+                                    border: '1px solid rgba(248,113,113,0.4)',
+                                    borderRadius: 8,
+                                    padding: '8px 10px',
+                                }}
+                            >
+                                {profileError}
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                            <button
+                                onClick={() => setShowProfileModal(false)}
+                                style={{
+                                    height: 36,
+                                    borderRadius: 9,
+                                    border: '1px solid rgba(148,163,184,0.35)',
+                                    background: 'rgba(30,41,59,0.8)',
+                                    color: '#cbd5e1',
+                                    padding: '0 12px',
+                                }}
+                            >
+                                キャンセル
+                            </button>
+                            <button
+                                onClick={handleSaveProfile}
+                                disabled={profileSaving || !profileUsername.trim()}
+                                style={{
+                                    height: 36,
+                                    borderRadius: 9,
+                                    border: '1px solid rgba(59,130,246,0.6)',
+                                    background:
+                                        profileSaving || !profileUsername.trim() ?
+                                            'rgba(30,64,175,0.45)'
+                                        :   'linear-gradient(180deg, #2563eb, #1d4ed8)',
+                                    color: '#fff',
+                                    padding: '0 14px',
+                                    opacity: profileSaving || !profileUsername.trim() ? 0.75 : 1,
+                                }}
+                            >
+                                {profileSaving ? '保存中...' : '保存'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

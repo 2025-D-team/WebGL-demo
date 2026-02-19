@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { GameConfig } from '../config/gameConfig'
 import { CollisionManager } from './CollisionManager'
@@ -42,6 +42,8 @@ const mapServerCatalogToFrontend = (items: unknown[]): CatalogEquipmentItem[] =>
 
 export const Game = ({ playerName = '' }: { playerName?: string }) => {
     const canvasRef = useRef<HTMLDivElement | null>(null)
+    const [currentUsername, setCurrentUsername] = useState(playerName)
+    const [currentEmail, setCurrentEmail] = useState('')
 
     // Initialize PIXI engine
     const { appRef, isInitialized } = useGameEngine({ canvasRef })
@@ -528,6 +530,20 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isInitialized, playerName])
 
+    useEffect(() => {
+        setCurrentUsername(playerName)
+        const stored = localStorage.getItem('user')
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored) as { username?: string; email?: string | null }
+                if (parsed.username) setCurrentUsername(parsed.username)
+                setCurrentEmail(parsed.email || '')
+            } catch {
+                // ignore malformed cache
+            }
+        }
+    }, [playerName])
+
     // Disable input when question popup is showing
     useEffect(() => {
         if (inputHandlerRef.current) {
@@ -630,6 +646,49 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
         }
     }
 
+    const handleLogout = async () => {
+        try {
+            const { authAPI } = await import('../services/api')
+            await authAPI.logout()
+        } catch {
+            // ignore logout network errors
+        } finally {
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            window.location.href = '/login'
+        }
+    }
+
+    const handleUpdateProfile = async (data: { username: string; email: string }) => {
+        try {
+            const { authAPI } = await import('../services/api')
+            const result = await authAPI.updateProfile({
+                username: data.username,
+                email: data.email,
+            })
+            if (!result.success || !result.user) {
+                return { success: false, error: result.error || '更新に失敗しました' }
+            }
+
+            if (result.token) {
+                localStorage.setItem('token', result.token)
+            }
+            localStorage.setItem('user', JSON.stringify(result.user))
+
+            setCurrentUsername(result.user.username || data.username)
+            setCurrentEmail(result.user.email || '')
+            characterRef.current?.setName(result.user.username || data.username)
+            multiplayerRef.current?.setName(result.user.username || data.username)
+
+            setNotification('個人情報を更新しました')
+            setTimeout(() => setNotification(null), 1800)
+            return { success: true }
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { error?: string } } }
+            return { success: false, error: err.response?.data?.error || '更新に失敗しました' }
+        }
+    }
+
     // Handle question answer submission (chest or boss)
     const handleSubmitAnswer = (answer: string) => {
         if (multiplayerRef.current && questionData) {
@@ -685,8 +744,12 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                 equippedItems={equippedItems}
                 playerScore={playerScore}
                 worldMessages={worldMessages}
+                currentUsername={currentUsername}
+                currentEmail={currentEmail}
                 onEquipItem={handleEquipItem}
                 onPurchaseItem={handlePurchaseItem}
+                onLogout={handleLogout}
+                onUpdateProfile={handleUpdateProfile}
             />
 
             <GameOverlays
