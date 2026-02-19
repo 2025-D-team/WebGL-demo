@@ -72,7 +72,7 @@ export const GameOverlays = ({
                         whiteSpace: 'nowrap',
                     }}
                 >
-                    {`イベント: ${bossSpawnCountdown.bossName} の出現まで ${formatRemaining(bossSpawnCountdown.remainingSeconds)}`}
+                    {`警告: ボス「${bossSpawnCountdown.bossName}」はあと ${formatRemaining(bossSpawnCountdown.remainingSeconds)} 後に出現します`}
                 </div>
             )}
 

@@ -312,18 +312,27 @@ export const GameUI = ({
                             padding: isWorldMessageCollapsed ? '8px 4px' : '8px 10px',
                             overflowY: isWorldMessageCollapsed ? 'hidden' : 'auto',
                             overflowX: 'hidden',
+                            display: isWorldMessageCollapsed ? 'flex' : 'block',
+                            alignItems: isWorldMessageCollapsed ? 'center' : undefined,
+                            justifyContent: isWorldMessageCollapsed ? 'center' : undefined,
                         }}
                     >
                         {isWorldMessageCollapsed ?
                             <div
                                 style={{
                                     writingMode: 'vertical-rl',
-                                    transform: 'rotate(180deg)',
+                                    textOrientation: 'upright',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                     color: '#94a3b8',
                                     fontSize: 10,
                                     letterSpacing: 1,
+                                    lineHeight: 1.2,
                                     opacity: 0.9,
-                                    margin: '0 auto',
+                                    width: '100%',
+                                    height: '100%',
+                                    textAlign: 'center',
                                 }}
                             >
                                 メッセージ

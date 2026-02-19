@@ -450,7 +450,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             setRanking(rankingData)
                         },
                         onWorldMessage: (message) => {
-                            setWorldMessages((prev) => [...prev, message].slice(-100))
+                            setWorldMessages((prev) => [...prev, message].slice(-20))
                         },
                     })
 
@@ -466,9 +466,9 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                     if (catalogResult.success && Array.isArray(catalogResult.items)) {
                         setItemCatalog(mapServerCatalogToFrontend(catalogResult.items))
                     }
-                    const worldMessageResult = await gameAPI.getWorldMessages(50)
+                    const worldMessageResult = await gameAPI.getWorldMessages(20)
                     if (worldMessageResult.success && Array.isArray(worldMessageResult.messages)) {
-                        const asc = [...(worldMessageResult.messages as WorldMessageData[])].reverse()
+                        const asc = [...(worldMessageResult.messages as WorldMessageData[])].reverse().slice(-20)
                         setWorldMessages(asc)
                     }
 
