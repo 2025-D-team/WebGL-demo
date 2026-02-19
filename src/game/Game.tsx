@@ -437,7 +437,7 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                             setRanking(rankingData)
                         },
                         onWorldMessage: (message) => {
-                            setWorldMessages((prev) => [message, ...prev].slice(0, 100))
+                            setWorldMessages((prev) => [...prev, message].slice(-100))
                         },
                     })
 
@@ -455,7 +455,8 @@ export const Game = ({ playerName = '' }: { playerName?: string }) => {
                     }
                     const worldMessageResult = await gameAPI.getWorldMessages(50)
                     if (worldMessageResult.success && Array.isArray(worldMessageResult.messages)) {
-                        setWorldMessages(worldMessageResult.messages as WorldMessageData[])
+                        const asc = [...(worldMessageResult.messages as WorldMessageData[])].reverse()
+                        setWorldMessages(asc)
                     }
 
                     const token = localStorage.getItem('token')

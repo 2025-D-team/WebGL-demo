@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { type CatalogEquipmentItem, type EquipmentSlot, type PlayerEquipment } from '../equipment/types'
 import { type WorldMessageData } from '../MultiplayerManager'
@@ -60,6 +60,7 @@ export const GameUI = ({
     onLogout,
     onUpdateProfile,
 }: GameUIProps) => {
+    const worldMessageListRef = useRef<HTMLDivElement | null>(null)
     const [activeInventoryTab, setActiveInventoryTab] = useState<EquipmentSlot>('head')
     const [activeShopTab, setActiveShopTab] = useState<EquipmentSlot>('head')
     const [showSettings, setShowSettings] = useState(false)
@@ -100,14 +101,33 @@ export const GameUI = ({
 
     const emojis = ['😄', '😀', '😂', '🤣', '😊', '🙂', '😉', '😍', '😘', '🥰', '😇', '🤩', '😮', '😲', '😢', '😡']
     const formatWorldTime = (raw: string) => {
-        const date = new Date(raw)
+        // MySQL DATETIME often arrives without timezone. Treat it as UTC, then render in JST.
+        const normalizedRaw =
+            /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw) ? raw.replace(' ', 'T') + 'Z' : raw
+        const date = new Date(normalizedRaw)
         if (Number.isNaN(date.getTime())) return '--:--'
-        const mm = String(date.getMonth() + 1).padStart(2, '0')
-        const dd = String(date.getDate()).padStart(2, '0')
-        const hh = String(date.getHours()).padStart(2, '0')
-        const min = String(date.getMinutes()).padStart(2, '0')
+
+        const formatter = new Intl.DateTimeFormat('ja-JP', {
+            timeZone: 'Asia/Tokyo',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        })
+        const parts = formatter.formatToParts(date)
+        const mm = parts.find((p) => p.type === 'month')?.value ?? '--'
+        const dd = parts.find((p) => p.type === 'day')?.value ?? '--'
+        const hh = parts.find((p) => p.type === 'hour')?.value ?? '--'
+        const min = parts.find((p) => p.type === 'minute')?.value ?? '--'
         return `${mm}/${dd} ${hh}:${min}`
     }
+
+    useEffect(() => {
+        const el = worldMessageListRef.current
+        if (!el) return
+        el.scrollTop = el.scrollHeight
+    }, [worldMessages])
 
     const openProfileModal = () => {
         setProfileUsername(currentUsername)
@@ -251,6 +271,7 @@ export const GameUI = ({
                 </button>
 
                 <div
+                    ref={worldMessageListRef}
                     style={{
                         width: 360,
                         minHeight: 132,
